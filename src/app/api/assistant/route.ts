@@ -71,16 +71,22 @@ export async function POST(request: NextRequest) {
       parts: [{ text: m.content }],
     }))
 
-    if (formattedMessages.length > 0) {
-      formattedMessages[0].parts[0].text = `${systemPrompt}\n\nUser: ${formattedMessages[0].parts[0].text}`
-    }
-
     const ai = new GoogleGenerativeAI(apiKey)
-    const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = ai.getGenerativeModel({ 
+      model: 'gemini-1.5-flash',
+      systemInstruction: systemPrompt
+    })
 
     const chatHistory = formattedMessages.slice(0, -1)
+    // Ensure history starts with 'user'
     const firstUserIndex = chatHistory.findIndex((m: any) => m.role === 'user')
-    const validHistory = firstUserIndex !== -1 ? chatHistory.slice(firstUserIndex) : []
+    let validHistory = firstUserIndex !== -1 ? chatHistory.slice(firstUserIndex) : []
+
+    // Gemini strictly requires alternating user/model roles. Let's enforce that.
+    validHistory = validHistory.filter((msg: any, i: number, arr: any[]) => {
+      if (i === 0) return msg.role === 'user'
+      return msg.role !== arr[i - 1].role
+    })
 
     const chat = model.startChat({
       history: validHistory,
