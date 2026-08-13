@@ -143,49 +143,78 @@ export default function SchedulePage() {
              </div>
            ) : (
              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-               {tasks.map(task => (
-                 <div key={task.id} style={{ 
-                   display: 'flex', alignItems: 'center', gap: 16, padding: '12px 16px', 
-                   background: 'rgba(0,212,255,0.03)', border: '1px solid rgba(0,212,255,0.08)',
-                   borderRadius: 12, opacity: task.is_completed ? 0.6 : 1
-                 }}>
-                   <div style={{ width: 4, height: 32, background: typeConfig[task.category]?.color || '#00d4ff', borderRadius: 2 }} />
-                   <div style={{ flex: 1 }}>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#e8f4ff', textDecoration: task.is_completed ? 'line-through' : 'none' }}>{task.title}</span>
-                        <span style={{ fontSize: 10, padding: '2px 6px', background: `${priorityColors[task.priority as keyof typeof priorityColors]}20`, color: priorityColors[task.priority as keyof typeof priorityColors], borderRadius: 4, textTransform: 'uppercase' }}>
-                          {task.priority}
-                        </span>
+               {[...tasks].sort((a, b) => {
+                 // 1. Completed to the bottom
+                 if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
+                 
+                 // 2. High priority to the top
+                 const pWeight: Record<string, number> = { high: 1, medium: 2, low: 3 };
+                 const wA = pWeight[a.priority] || 3;
+                 const wB = pWeight[b.priority] || 3;
+                 if (wA !== wB) return wA - wB;
+                 
+                 // 3. Sort by date and time
+                 if (a.scheduled_date !== b.scheduled_date) return a.scheduled_date.localeCompare(b.scheduled_date);
+                 return (a.scheduled_time || '').localeCompare(b.scheduled_time || '');
+               }).map(task => {
+                 const taskDateTime = new Date(`${task.scheduled_date}T${task.scheduled_time}`);
+                 const isOverdue = !task.is_completed && new Date() > taskDateTime;
+
+                 return (
+                   <div key={task.id} style={{ 
+                     display: 'flex', alignItems: 'center', gap: 16, padding: '12px 16px', 
+                     background: isOverdue ? 'rgba(255,51,102,0.1)' : 'rgba(0,212,255,0.03)', 
+                     border: `1px solid ${isOverdue ? 'rgba(255,51,102,0.4)' : 'rgba(0,212,255,0.08)'}`,
+                     borderRadius: 12, opacity: task.is_completed ? 0.6 : 1,
+                     position: 'relative',
+                     overflow: 'hidden'
+                   }}>
+                     {isOverdue && (
+                        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(90deg, rgba(255,51,102,0.1) 0%, transparent 100%)', pointerEvents: 'none', animation: 'pulse 2s infinite' }} />
+                     )}
+                     <div style={{ width: 4, height: 32, background: typeConfig[task.category]?.color || '#00d4ff', borderRadius: 2, zIndex: 1 }} />
+                     <div style={{ flex: 1, zIndex: 1 }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: isOverdue ? '#ff6688' : '#e8f4ff', textDecoration: task.is_completed ? 'line-through' : 'none' }}>
+                            {task.title}
+                          </span>
+                          <span style={{ fontSize: 10, padding: '2px 6px', background: `${priorityColors[task.priority as keyof typeof priorityColors]}20`, color: priorityColors[task.priority as keyof typeof priorityColors], borderRadius: 4, textTransform: 'uppercase' }}>
+                            {task.priority}
+                          </span>
+                          {isOverdue && (
+                             <span style={{ fontSize: 9, padding: '2px 6px', background: '#ff3366', color: '#fff', borderRadius: 4, fontWeight: 'bold' }}>OVERDUE</span>
+                          )}
+                       </div>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: isOverdue ? '#ff6688' : '#4a6580' }}>
+                            <Clock size={12} />
+                            {task.scheduled_time?.slice(0, 5)} · {task.duration_minutes}m
+                          </div>
+                          <div style={{ fontSize: 11, color: isOverdue ? '#ff6688' : '#4a6580' }}>
+                            {task.scheduled_date}
+                          </div>
+                       </div>
                      </div>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#4a6580' }}>
-                          <Clock size={12} />
-                          {task.scheduled_time?.slice(0, 5)} · {task.duration_minutes}m
-                        </div>
-                        <div style={{ fontSize: 11, color: '#4a6580' }}>
-                          {task.scheduled_date}
-                        </div>
+                     <div style={{ display: 'flex', gap: 8, zIndex: 1 }}>
+                       <button 
+                          onClick={() => toggleComplete(task.id, task.is_completed)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+                        >
+                         {task.is_completed 
+                           ? <CheckCircle2 size={18} style={{ color: '#00ff88' }} /> 
+                           : <Circle size={18} style={{ color: isOverdue ? '#ff3366' : '#4a6580' }} />
+                         }
+                       </button>
+                       <button 
+                          onClick={() => deleteTask(task.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#4a6580' }}
+                        >
+                         <Trash2 size={16} />
+                       </button>
                      </div>
                    </div>
-                   <div style={{ display: 'flex', gap: 8 }}>
-                     <button 
-                        onClick={() => toggleComplete(task.id, task.is_completed)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-                      >
-                       {task.is_completed 
-                         ? <CheckCircle2 size={18} style={{ color: '#00ff88' }} /> 
-                         : <Circle size={18} style={{ color: '#4a6580' }} />
-                       }
-                     </button>
-                     <button 
-                        onClick={() => deleteTask(task.id)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#4a6580' }}
-                      >
-                       <Trash2 size={16} />
-                     </button>
-                   </div>
-                 </div>
-               ))}
+                 )
+               })}
              </div>
            )}
         </div>
