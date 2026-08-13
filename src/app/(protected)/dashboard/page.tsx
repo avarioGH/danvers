@@ -359,8 +359,8 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            {chartData.length > 0 ? (
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="gScore" x1="0" y1="0" x2="0" y2="1">
@@ -386,12 +386,12 @@ export default function DashboardPage() {
                 <Area type="monotone" dataKey="focus" stroke="#1a6fff" strokeWidth={2} fill="url(#gFocus)" dot={false} />
                 <Area type="monotone" dataKey="energy" stroke="#00ff88" strokeWidth={2} fill="url(#gEnergy)" dot={false} />
               </AreaChart>
-            ) : (
-               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4a6580', fontSize: 13 }}>
-                 Not enough data yet. Log your performance today.
-               </div>
-            )}
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4a6580', fontSize: 13 }}>
+              Not enough data yet. Log your performance today.
+            </div>
+          )}
         </div>
 
         <div className="glass-card animate-fade-up" style={{ padding: 24 }}>
