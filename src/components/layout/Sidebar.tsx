@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, MessageSquare, Calendar, Dumbbell,
   UtensilsCrossed, Target, Moon, BarChart3, Brain,
-  Settings, Zap, ChevronRight, LogOut
+  Settings, Zap, ChevronRight, LogOut, Trophy
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/nutrition', icon: UtensilsCrossed, label: 'Nutrition', group: 'systems' },
   { href: '/habits', icon: Target, label: 'Habits', group: 'systems' },
   { href: '/sleep', icon: Moon, label: 'Sleep', group: 'systems' },
+  { href: '/achievements', icon: Trophy, label: 'Achievements', group: 'systems' },
   { href: '/analytics', icon: BarChart3, label: 'Analytics', group: 'intelligence' },
   { href: '/goals', icon: Zap, label: 'Goals', group: 'intelligence' },
   { href: '/memory', icon: Brain, label: 'AI Memory', group: 'intelligence' },
