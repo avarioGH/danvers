@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Mail, Lock, AlertCircle, Eye, EyeOff, ShieldAlert, Terminal } from 'lucide-react'
+import { Mail, Lock, AlertCircle, Eye, EyeOff, ShieldAlert, Terminal, Mic, MicOff } from 'lucide-react'
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -14,6 +15,8 @@ export default function LoginPage() {
   const [inputBuffer, setInputBuffer] = useState('')
   const [mounted, setMounted] = useState(false)
   
+  const { isListening, transcript, startListening, stopListening, error: speechError, setTranscript } = useSpeechRecognition()
+
   const supabase = createClient()
   const router = useRouter()
 
@@ -21,7 +24,7 @@ export default function LoginPage() {
     setMounted(true)
   }, [])
 
-  // Secret sequence to reveal the login: typing "danvers"
+  // Keyboard ghost mode bypass
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.key) return
@@ -38,20 +41,32 @@ export default function LoginPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [inputBuffer])
 
+  // Voice ghost mode bypass & voice login
+  useEffect(() => {
+    if (transcript.includes('hi danvers') || transcript.includes('hai danvers')) {
+      setIsGhostMode(false)
+      
+      // Auto-login easter egg if they say the full phrase
+      if (transcript.includes('login') || transcript.includes('masuk')) {
+        // We set a flag to auto-submit, but we need the credentials
+        // In a real secure app, voice biometrics would be used on the backend.
+        // For this personal OS, we'll just prompt them or if they use a very specific phrase.
+        setTranscript('')
+        stopListening()
+      }
+    }
+  }, [transcript, setIsGhostMode, setTranscript, stopListening])
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
     try {
-      // First attempt: Sign In
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       
       if (signInError) {
-        // If sign in fails, it might be because the account doesn't exist yet.
-        // For a private OS, we'll try to Sign Up the user automatically if they don't exist.
         if (signInError.message.includes('Invalid login credentials')) {
-           // Try signing up
            const { error: signUpError } = await supabase.auth.signUp({ email, password })
            if (signUpError) throw signUpError
            
@@ -83,10 +98,42 @@ export default function LoginPage() {
         </div>
         <h2 style={{ fontSize: 14, letterSpacing: '0.2em', fontWeight: 400 }}>SYSTEM STATUS: OFFLINE</h2>
         <p style={{ fontSize: 11, marginTop: 12, opacity: 0.5 }}>UNAUTHORIZED ACCESS IS A FEDERAL OFFENSE</p>
+        
+        {/* Voice Activation for Mobile */}
+        <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <button 
+            onClick={isListening ? stopListening : startListening}
+            style={{
+              background: 'transparent',
+              border: `1px solid ${isListening ? '#00d4ff' : '#1a2a3a'}`,
+              borderRadius: '50%',
+              width: 60,
+              height: 60,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: isListening ? '#00d4ff' : '#1a2a3a',
+              transition: 'all 0.3s',
+              boxShadow: isListening ? '0 0 15px rgba(0,212,255,0.3)' : 'none'
+            }}
+          >
+            {isListening ? <Mic size={24} className="animate-pulse" /> : <MicOff size={24} />}
+          </button>
+          <p style={{ fontSize: 10, marginTop: 12, opacity: isListening ? 0.8 : 0.3, color: isListening ? '#00d4ff' : '#1a2a3a' }}>
+            {isListening ? 'LISTENING FOR WAKE WORD...' : 'TAP MIC & SAY "HI DANVERS" TO OVERRIDE'}
+          </p>
+          {transcript && isListening && (
+            <p style={{ fontSize: 10, marginTop: 8, color: '#4a6580' }}>"{transcript}"</p>
+          )}
+          {speechError && (
+             <p style={{ fontSize: 10, marginTop: 8, color: '#ff3366' }}>Error: {speechError}</p>
+          )}
+        </div>
+
         <div style={{ position: 'fixed', bottom: 20, right: 20, fontSize: 10, opacity: 0.1 }}>
           TERMINAL_ID: {mounted ? Math.random().toString(36).substring(7).toUpperCase() : 'LOADING...'}
         </div>
-        {/* The user just needs to type "danvers" now */}
       </div>
     )
   }
@@ -168,6 +215,29 @@ export default function LoginPage() {
           </form>
         </div>
         
+        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <button 
+                onClick={isListening ? stopListening : startListening}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  cursor: 'pointer',
+                  color: isListening ? '#00d4ff' : '#4a6580',
+                  fontSize: 10,
+                  fontFamily: 'JetBrains Mono, monospace'
+                }}
+            >
+                {isListening ? <Mic size={14} className="animate-pulse" /> : <MicOff size={14} />}
+                {isListening ? 'VOICE PROTOCOL ACTIVE' : 'ACTIVATE VOICE LOGIN'}
+            </button>
+            {transcript && isListening && (
+                <p style={{ fontSize: 10, color: '#4a6580', marginTop: 4 }}>"{transcript}"</p>
+            )}
+        </div>
+
         <p style={{ textAlign: 'center', fontSize: 10, color: '#1a2a3a', marginTop: 24, fontFamily: 'JetBrains Mono, monospace' }}>
           GHOST_PROTOCOL_ENABLED // ENCRYPTION_ACTIVE
         </p>
