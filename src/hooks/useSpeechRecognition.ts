@@ -21,6 +21,16 @@ export function useSpeechRecognition() {
       }
 
       const recognition = new SpeechRecognition()
+      
+      // Add custom vocabulary/grammar to help the engine recognize "Danvers"
+      const SpeechGrammarList = (window as any).SpeechGrammarList || (window as any).webkitSpeechGrammarList
+      if (SpeechGrammarList) {
+        const speechRecognitionList = new SpeechGrammarList()
+        const grammar = '#JSGF V1.0; grammar names; public <name> = danvers | hi danvers | hai danvers ;'
+        speechRecognitionList.addFromString(grammar, 1)
+        recognition.grammars = speechRecognitionList
+      }
+
       recognition.continuous = true
       recognition.interimResults = true
       recognition.lang = 'id-ID' // Set default language to Indonesian (can be dynamic)
