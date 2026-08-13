@@ -6,6 +6,13 @@ export const metadata: Metadata = {
   description: "Your private AI-powered life operating system. Manage life, health, productivity, and goals with intelligence.",
   keywords: ["AI", "Danvers", "productivity", "life management", "personal OS"],
   robots: "noindex, nofollow",
+  manifest: "/manifest.json",
+  themeColor: "#020408",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "DANVERS",
+  },
 };
 
 export default function RootLayout({
