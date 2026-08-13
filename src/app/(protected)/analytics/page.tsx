@@ -58,8 +58,8 @@ export default function AnalyticsPage() {
       ])
 
       // Generate 6 months names dynamically
-      const months = []
-      const monthIndexes = []
+      const months: string[] = []
+      const monthIndexes: number[] = []
       for (let i = 5; i >= 0; i--) {
         const d = new Date()
         d.setMonth(d.getMonth() - i)
