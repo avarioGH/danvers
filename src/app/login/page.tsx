@@ -43,14 +43,14 @@ export default function LoginPage() {
 
   // Voice ghost mode bypass & voice login
   useEffect(() => {
-    if (transcript.includes('hi danvers') || transcript.includes('hai danvers')) {
+    // List of possible transcriptions for "Hi Danvers" in Indonesian locale
+    const wakeWords = ['hi danvers', 'hai danvers', 'head first', 'hi denver', 'hai denver']
+    
+    if (wakeWords.some(word => transcript.includes(word))) {
       setIsGhostMode(false)
       
       // Auto-login easter egg if they say the full phrase
       if (transcript.includes('login') || transcript.includes('masuk')) {
-        // We set a flag to auto-submit, but we need the credentials
-        // In a real secure app, voice biometrics would be used on the backend.
-        // For this personal OS, we'll just prompt them or if they use a very specific phrase.
         setTranscript('')
         stopListening()
       }
