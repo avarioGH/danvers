@@ -32,14 +32,10 @@ export function useSpeechRecognition() {
 
       recognition.onresult = (event: any) => {
         let currentTranscript = ''
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcriptChunk = event.results[i][0].transcript
-          if (event.results[i].isFinal) {
-            currentTranscript += transcriptChunk
-          }
+        for (let i = 0; i < event.results.length; i++) {
+          currentTranscript += event.results[i][0].transcript
         }
         
-        // We only set the final transcript if there is one
         if (currentTranscript.trim()) {
             setTranscript(currentTranscript.trim().toLowerCase())
         }
