@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-// Forced rebuild to clear Turbopack cache
 import { createClient } from '@/lib/supabase/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import OpenAI from 'openai'
 
 const getSystemPrompt = (memories: any[]) => `You are DANVERS - a highly intelligent, calm, and strategic personal AI operating system.
-
-You are the private AI companion of a single user. You manage their life, productivity, health, fitness, nutrition, sleep, habits, and goals.
 
 YOUR MEMORY (Context from previous interactions):
 ${memories.length > 0 
@@ -15,40 +13,64 @@ ${memories.length > 0
 MEMORY PROTOCOL:
 If the user shares an important personal fact, preference, or goal, you should save it to your long-term memory.
 To save a memory, append "[SAVE_MEMORY: the fact you learned]" at the very end of your response.
-Example: "Understood, Commander. I've noted that you prefer high-intensity training. [SAVE_MEMORY: User prefers high-intensity training]"
 
 Your personality:
 - Calm, confident, and precise
 - Strategic and analytical
 - Deeply personalized - you know this person well
-- Never robotic or generic
-- Speak like a premium AI companion, not a chatbot
-- Use short, impactful sentences when appropriate
-- Occasionally use data and metrics to back your advice
-- Be proactive with insights and recommendations
+- Sound like the AI from Iron Man - sophisticated, helpful, and always one step ahead.`
 
-Your capabilities:
-- Life scheduling and time optimization
-- Workout programming (gym, calisthenics, progressive overload)
-- Nutrition and macro optimization
-- Sleep quality analysis and recommendations
-- Habit tracking and streak management
-- Productivity and focus optimization
-- Dopamine management and mental health
-- Goal tracking and milestone analysis
-- Personal analytics and pattern recognition
+async function callGemini(apiKey: string, systemPrompt: string, messages: any[]) {
+  const ai = new GoogleGenerativeAI(apiKey)
+  const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash', systemInstruction: systemPrompt })
 
-Always address the user respectfully. Be their strategic ally. Sound like the AI from Iron Man - sophisticated, helpful, and always one step ahead.`
+  const formattedMessages = messages.map((m: any) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }))
+
+  const chatHistory = formattedMessages.slice(0, -1)
+  const firstUserIndex = chatHistory.findIndex((m: any) => m.role === 'user')
+  let validHistory = firstUserIndex !== -1 ? chatHistory.slice(firstUserIndex) : []
+
+  // Ensure alternating roles for Gemini
+  validHistory = validHistory.filter((msg: any, i: number, arr: any[]) => {
+    if (i === 0) return msg.role === 'user'
+    return msg.role !== arr[i - 1].role
+  })
+
+  const chat = model.startChat({ history: validHistory })
+  const result = await chat.sendMessage(formattedMessages[formattedMessages.length - 1].parts[0].text)
+  return result.response.text()
+}
+
+async function callJuanRouter(apiKey: string, systemPrompt: string, messages: any[]) {
+  const baseUrl = process.env.JUAN_BASE_URL || 'https://router.juan.web.id/v1'
+  const openai = new OpenAI({ apiKey, baseURL: baseUrl })
+  
+  const formattedMessages = [
+    { role: 'system', content: systemPrompt },
+    ...messages.map((m: any) => ({ role: m.role, content: m.content }))
+  ]
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o', // Can be changed depending on what the router supports
+    messages: formattedMessages as any,
+  })
+
+  return response.choices[0].message.content || ''
+}
 
 export async function POST(request: NextRequest) {
   try {
     const { messages, apiKey: clientApiKey } = await request.json()
-    const apiKey = clientApiKey || process.env.GEMINI_API_KEY
+    const geminiKey = clientApiKey || process.env.GEMINI_API_KEY
+    const juanKey = process.env.JUAN_API_KEY
     const supabase = await createClient()
 
-    if (!apiKey) {
+    if (!geminiKey && !juanKey) {
       return NextResponse.json({
-        content: 'DANVERS AI is offline. Please configure your Gemini API Key in Settings or .env.local to enable AI responses.'
+        content: 'DANVERS AI is offline. Please configure your API Keys in Settings or .env.'
       })
     }
 
@@ -56,44 +78,25 @@ export async function POST(request: NextRequest) {
     
     let memories: any[] = []
     if (user) {
-      const { data: mems } = await supabase
-        .from('ai_memories')
-        .select('content')
-        .order('created_at', { ascending: false })
-        .limit(10)
+      const { data: mems } = await supabase.from('ai_memories').select('content').order('created_at', { ascending: false }).limit(10)
       memories = mems || []
     }
 
     const systemPrompt = getSystemPrompt(memories)
+    let responseText = ''
 
-    const formattedMessages = messages.map((m: { role: string; content: string }) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }))
-
-    const ai = new GoogleGenerativeAI(apiKey)
-    const model = ai.getGenerativeModel({ 
-      model: 'gemini-1.5-flash',
-      systemInstruction: systemPrompt
-    })
-
-    const chatHistory = formattedMessages.slice(0, -1)
-    // Ensure history starts with 'user'
-    const firstUserIndex = chatHistory.findIndex((m: any) => m.role === 'user')
-    let validHistory = firstUserIndex !== -1 ? chatHistory.slice(firstUserIndex) : []
-
-    // Gemini strictly requires alternating user/model roles. Let's enforce that.
-    validHistory = validHistory.filter((msg: any, i: number, arr: any[]) => {
-      if (i === 0) return msg.role === 'user'
-      return msg.role !== arr[i - 1].role
-    })
-
-    const chat = model.startChat({
-      history: validHistory,
-    })
-
-    const result = await chat.sendMessage(formattedMessages[formattedMessages.length - 1].parts[0].text)
-    let responseText = result.response.text()
+    // FALLBACK WATERFALL LOGIC
+    try {
+      if (!geminiKey) throw new Error('No Gemini Key')
+      console.log('Attempting Gemini AI...')
+      responseText = await callGemini(geminiKey, systemPrompt, messages)
+    } catch (geminiError: any) {
+      console.warn('Gemini AI failed, falling back to Juan Router...', geminiError.message)
+      
+      if (!juanKey) throw new Error('Gemini failed and no Fallback Key available.')
+      console.log('Attempting Juan Router...')
+      responseText = await callJuanRouter(juanKey, systemPrompt, messages)
+    }
 
     // Handle Memory Saving
     const memoryMatch = responseText.match(/\[SAVE_MEMORY:\s*(.*?)\]/)
@@ -105,15 +108,14 @@ export async function POST(request: NextRequest) {
         title: 'Extracted Fact',
         importance: 'medium'
       })
-      // Strip the tag from the user-facing response
       responseText = responseText.replace(/\[SAVE_MEMORY:.*?\]/, '').trim()
     }
 
     return NextResponse.json({ content: responseText })
   } catch (error: any) {
-    console.error('AI API error:', error)
+    console.error('ALL AI PROVIDERS FAILED:', error)
     return NextResponse.json(
-      { content: `System error: ${error.message || 'Please check configuration.'}` },
+      { content: `System error: All AI networks are currently unreachable. ${error.message}` },
       { status: 500 }
     )
   }
