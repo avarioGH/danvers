@@ -35,36 +35,88 @@ export default function AnalyticsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
+      const sixMonthsAgo = new Date()
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5)
+      sixMonthsAgo.setDate(1)
+      const sixMonthsAgoStr = sixMonthsAgo.toLocaleDateString('en-CA')
+
       // Fetch Data
       const [
         { data: dLogs },
         { data: sLogs },
         { data: wLogs },
         { data: mLogs },
+        { data: hLogs },
         { data: tasks }
       ] = await Promise.all([
-        supabase.from('daily_logs').select('*').eq('user_id', user.id),
-        supabase.from('sleep_logs').select('*').eq('user_id', user.id),
-        supabase.from('workouts').select('*').eq('user_id', user.id),
-        supabase.from('meal_logs').select('*').eq('user_id', user.id),
-        supabase.from('tasks').select('*').eq('user_id', user.id).eq('is_completed', true)
+        supabase.from('daily_logs').select('*').eq('user_id', user.id).gte('date', sixMonthsAgoStr),
+        supabase.from('sleep_logs').select('*').eq('user_id', user.id).gte('sleep_date', sixMonthsAgoStr),
+        supabase.from('workouts').select('*').eq('user_id', user.id).gte('workout_date', sixMonthsAgoStr),
+        supabase.from('meal_logs').select('*').eq('user_id', user.id).gte('log_date', sixMonthsAgoStr),
+        supabase.from('habit_logs').select('*').eq('user_id', user.id).gte('completed_date', sixMonthsAgoStr),
+        supabase.from('tasks').select('*').eq('user_id', user.id).eq('is_completed', true).gte('scheduled_date', sixMonthsAgoStr)
       ])
 
-      // Calculate Averages
+      // Generate 6 months names dynamically
+      const months = []
+      const monthIndexes = []
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date()
+        d.setMonth(d.getMonth() - i)
+        months.push(d.toLocaleString('default', { month: 'short' }))
+        monthIndexes.push(d.getMonth())
+      }
+
+      const trends = months.map((month, i) => {
+        const targetMonth = monthIndexes[i]
+        
+        const monthDLogs = dLogs?.filter(d => new Date(d.date).getMonth() === targetMonth) || []
+        const monthSLogs = sLogs?.filter(d => new Date(d.sleep_date).getMonth() === targetMonth) || []
+        const monthWLogs = wLogs?.filter(d => new Date(d.workout_date).getMonth() === targetMonth) || []
+        const monthHLogs = hLogs?.filter(d => new Date(d.completed_date).getMonth() === targetMonth) || []
+        const monthMLogs = mLogs?.filter(d => new Date(d.log_date).getMonth() === targetMonth) || []
+
+        const dLen = monthDLogs.length || 1
+        const sLen = monthSLogs.length || 1
+        
+        const prod = Math.round((monthDLogs.reduce((acc, curr) => acc + (curr.energy_score || 0) + (curr.focus_score || 0), 0) / 2) / dLen)
+        const sleep = Math.round(monthSLogs.reduce((acc, curr) => acc + (curr.quality_score || 0), 0) / sLen)
+        const fitness = Math.min(100, Math.round((monthWLogs.length / 16) * 100))
+        const habitsScore = Math.min(100, Math.round((monthHLogs.length / 30) * 100))
+        const nutritionScore = Math.min(100, Math.round((monthMLogs.length / 90) * 100))
+
+        return {
+          month,
+          productivity: prod || 0,
+          sleep: sleep || 0,
+          fitness: fitness || 0,
+          habits: habitsScore || 0,
+          nutrition: nutritionScore || 0
+        }
+      })
+      setMonthlyTrends(trends)
+
+      // Calculate Overall Averages
       const dLogLen = dLogs && dLogs.length > 0 ? dLogs.length : 1
       const avgEnergy = (dLogs?.reduce((acc, curr) => acc + (curr.energy_score || 0), 0) || 0) / dLogLen
       const avgFocus = (dLogs?.reduce((acc, curr) => acc + (curr.focus_score || 0), 0) || 0) / dLogLen
-      const avgMood = (dLogs?.reduce((acc, curr) => acc + (curr.mood_score || 0), 0) || 0) / dLogLen
+      const avgMood = (dLogs?.reduce((acc, curr) => acc + (curr.mood_score || 0), 0) / dLogLen) || 0
 
       const sLogLen = sLogs && sLogs.length > 0 ? sLogs.length : 1
       const avgSleepQuality = (sLogs?.reduce((acc, curr) => acc + (curr.quality_score || 0), 0) || 0) / sLogLen
 
-      const fitnessScore = Math.min(100, (wLogs?.length || 0) * 10) || 0
-      const nutritionScore = Math.min(100, (mLogs?.length || 0) * 5) || 0
+      // For overall metrics, we look at average of recent months
+      const currentMonthIndex = new Date().getMonth()
+      const currentMonthWLogs = wLogs?.filter(d => new Date(d.workout_date).getMonth() === currentMonthIndex) || []
+      const currentMonthMLogs = mLogs?.filter(d => new Date(d.log_date).getMonth() === currentMonthIndex) || []
+      const currentMonthHLogs = hLogs?.filter(d => new Date(d.completed_date).getMonth() === currentMonthIndex) || []
+
+      const fitnessScore = Math.min(100, Math.round((currentMonthWLogs.length / 16) * 100)) || 0
+      const nutritionScore = Math.min(100, Math.round((currentMonthMLogs.length / 90) * 100)) || 0
+      const habitsOverall = Math.min(100, Math.round((currentMonthHLogs.length / 30) * 100)) || 0
 
       const prodScore = Math.round(avgEnergy) || 0
       const focusScore = Math.round(avgFocus) || 0
-      const mindsetScore = Math.round(avgMood) || 0
       const sleepScore = Math.round(avgSleepQuality) || 0
       const recoveryScore = Math.round((sleepScore + fitnessScore) / 2)
 
@@ -72,27 +124,12 @@ export default function AnalyticsPage() {
         productivity: prodScore,
         sleep: sleepScore,
         fitness: fitnessScore,
-        habits: 85,
+        habits: habitsOverall,
         focus: focusScore,
         nutrition: nutritionScore,
         recovery: recoveryScore,
-        mindset: mindsetScore
+        mindset: Math.round(avgMood)
       })
-
-      // Generate realistic monthly trends based on current metrics + some variance
-      const months = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May']
-      const trends = months.map((month, index) => {
-        const decay = 1 - ((5 - index) * 0.05)
-        return {
-          month,
-          productivity: Math.round(prodScore * decay) || 0,
-          sleep: Math.round(sleepScore * decay) || 0,
-          fitness: Math.round(fitnessScore * decay) || 0,
-          habits: Math.round(85 * decay) || 0,
-          nutrition: Math.round(nutritionScore * decay) || 0
-        }
-      })
-      setMonthlyTrends(trends)
 
       // Calculate Hourly Productivity from Tasks
       const hourCounts: Record<string, number> = {}
