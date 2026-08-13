@@ -62,8 +62,11 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
+    const cleanEmail = email.trim()
+    const cleanPassword = password.trim()
+
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: cleanPassword })
       
       if (signInError) {
         if (signInError.message.includes('Invalid login credentials')) {
