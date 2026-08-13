@@ -54,7 +54,7 @@ async function callJuanRouter(apiKey: string, systemPrompt: string, messages: an
   ]
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o', // Can be changed depending on what the router supports
+    model: 'agnes-2.0-flash', // Can be changed depending on what the router supports
     messages: formattedMessages as any,
   })
 
