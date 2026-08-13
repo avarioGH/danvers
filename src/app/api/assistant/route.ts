@@ -53,12 +53,32 @@ async function callJuanRouter(apiKey: string, systemPrompt: string, messages: an
     ...messages.map((m: any) => ({ role: m.role, content: m.content }))
   ]
 
-  const response = await openai.chat.completions.create({
-    model: 'agnes-2.0-flash', // Can be changed depending on what the router supports
-    messages: formattedMessages as any,
-  })
+  const fallbackModels = [
+    'agnes-2.0-flash',
+    'gemma-4-31b-it',
+    'laguna-s-2.1',
+    'laguna-xs-2.1',
+    'ling-3.0-flash-free',
+    'mistral-large'
+  ]
 
-  return response.choices[0].message.content || ''
+  let lastError = null
+
+  for (const model of fallbackModels) {
+    try {
+      console.log(`[Juan Router] Attempting model: ${model}...`)
+      const response = await openai.chat.completions.create({
+        model: model,
+        messages: formattedMessages as any,
+      })
+      return response.choices[0].message.content || ''
+    } catch (err: any) {
+      console.warn(`[Juan Router] Model ${model} failed:`, err.message)
+      lastError = err
+    }
+  }
+
+  throw new Error(`All Juan Router fallback models failed. Last error: ${lastError?.message}`)
 }
 
 export async function POST(request: NextRequest) {
@@ -94,7 +114,7 @@ export async function POST(request: NextRequest) {
       console.warn('Gemini AI failed, falling back to Juan Router...', geminiError.message)
       
       if (!juanKey) throw new Error('Gemini failed and no Fallback Key available.')
-      console.log('Attempting Juan Router...')
+      console.log('Attempting Juan Router Fallback Chain...')
       responseText = await callJuanRouter(juanKey, systemPrompt, messages)
     }
 
