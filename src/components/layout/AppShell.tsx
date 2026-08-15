@@ -50,7 +50,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Top bar */}
         <header style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 24, padding: '12px 0',
+          marginBottom: 24, padding: '12px 0', paddingTop: 'max(12px, env(safe-area-inset-top))',
           borderBottom: '1px solid rgba(0,212,255,0.06)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

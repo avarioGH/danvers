@@ -49,7 +49,7 @@ export default function Sidebar({ mobile = false, onClose }: { mobile?: boolean;
   }
 
   return (
-    <aside className="sidebar" style={{ width: mobile ? '100%' : '240px' }}>
+    <aside className={`sidebar ${mobile ? 'open' : ''}`} style={{ width: mobile ? '100%' : '240px' }}>
       {/* Logo */}
       <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid rgba(0,212,255,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
