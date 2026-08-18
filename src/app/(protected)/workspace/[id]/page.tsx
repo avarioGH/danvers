@@ -24,7 +24,7 @@ export default function ProjectDetailPage() {
   const [desc, setDesc] = useState('')
   const [priority, setPriority] = useState('medium')
   const [assigneeId, setAssigneeId] = useState('')
-  const [deadline, setDeadline] = useState('')
+  const [deadline, setDeadline] = useState(new Date().toISOString().split('T')[0])
 
   // AI form
   const [aiPrompt, setAiPrompt] = useState('')
