@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Plus, Users, FolderKanban, ChevronRight, Loader2 } from 'lucide-react'
+import { Plus, Users, FolderKanban, ChevronRight, Loader2, Trash2, Edit3 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -9,7 +9,9 @@ export default function WorkspacePage() {
   const [users, setUsers] = useState<any[]>([])
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  
   const [showNewProject, setShowNewProject] = useState(false)
+  const [editingProject, setEditingProject] = useState<any>(null)
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectDesc, setNewProjectDesc] = useState('')
 
@@ -47,11 +49,31 @@ export default function WorkspacePage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    if (editingProject) {
+      const { data, error } = await supabase.from('projects')
+        .update({ name: newProjectName, description: newProjectDesc })
+        .eq('id', editingProject.id)
+        .select('*, created_by_user:user_profiles!created_by(name)')
+        .single()
+      
+      if (error) {
+        console.error(error)
+        alert('Failed to update project.')
+        return
+      }
+
+      if (data) {
+        setProjects(projects.map(p => p.id === data.id ? data : p))
+        closeModal()
+      }
+      return
+    }
+
     const { data, error } = await supabase.from('projects').insert({
       name: newProjectName,
       description: newProjectDesc,
       created_by: user.id
-    }).select().single()
+    }).select('*, created_by_user:user_profiles!created_by(name)').single()
 
     if (error) {
       console.error(error)
@@ -61,11 +83,37 @@ export default function WorkspacePage() {
 
     if (data) {
       setProjects([data, ...projects])
-      setShowNewProject(false)
-      setNewProjectName('')
-      setNewProjectDesc('')
+      closeModal()
       router.push(`/workspace/${data.id}`)
     }
+  }
+
+  const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!confirm('Are you sure you want to delete this project?')) return
+
+    const { error } = await supabase.from('projects').delete().eq('id', id)
+    if (error) {
+      console.error(error)
+      alert('Failed to delete project.')
+    } else {
+      setProjects(projects.filter(p => p.id !== id))
+    }
+  }
+
+  const openEditModal = (p: any, e: React.MouseEvent) => {
+    e.preventDefault()
+    setEditingProject(p)
+    setNewProjectName(p.name)
+    setNewProjectDesc(p.description || '')
+    setShowNewProject(true)
+  }
+
+  const closeModal = () => {
+    setShowNewProject(false)
+    setEditingProject(null)
+    setNewProjectName('')
+    setNewProjectDesc('')
   }
 
   return (
@@ -102,7 +150,27 @@ export default function WorkspacePage() {
                         Created by {p.created_by_user?.name || 'Unknown'} · {new Date(p.created_at).toLocaleDateString()}
                       </div>
                     </div>
-                    <ChevronRight size={20} style={{ color: '#4a6580' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button 
+                        onClick={(e) => openEditModal(p, e)}
+                        style={{ padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 8, color: '#8bacc8', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#00d4ff'}
+                        onMouseLeave={e => e.currentTarget.style.color = '#8bacc8'}
+                        title="Edit Project"
+                      >
+                        <Edit3 size={16} />
+                      </button>
+                      <button 
+                        onClick={(e) => handleDeleteProject(p.id, e)}
+                        style={{ padding: 8, background: 'rgba(255,50,50,0.1)', borderRadius: 8, color: '#ff6b6b', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,50,50,0.2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,50,50,0.1)'}
+                        title="Delete Project"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                      <ChevronRight size={20} style={{ color: '#4a6580', marginLeft: 8 }} />
+                    </div>
                   </div>
                 </Link>
               ))}
@@ -148,9 +216,11 @@ export default function WorkspacePage() {
 
       {showNewProject && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }} onClick={() => setShowNewProject(false)} />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }} onClick={closeModal} />
           <div className="glass-card animate-fade-scale" style={{ width: '100%', maxWidth: 450, padding: 32, position: 'relative' }}>
-             <h2 style={{ fontFamily: 'Orbitron, monospace', fontSize: 18, color: '#e8f4ff', marginBottom: 24 }}>NEW PROJECT</h2>
+             <h2 style={{ fontFamily: 'Orbitron, monospace', fontSize: 18, color: '#e8f4ff', marginBottom: 24 }}>
+               {editingProject ? 'EDIT PROJECT' : 'NEW PROJECT'}
+             </h2>
              <form onSubmit={handleCreateProject} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                <div>
                  <label style={{ display: 'block', fontSize: 11, color: '#4a6580', marginBottom: 8 }}>PROJECT NAME</label>
@@ -161,8 +231,10 @@ export default function WorkspacePage() {
                  <textarea className="danvers-input" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} rows={3} placeholder="Project objectives..." />
                </div>
                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                 <button type="button" onClick={() => setShowNewProject(false)} className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
-                 <button type="submit" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }}>Create Project</button>
+                 <button type="button" onClick={closeModal} className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+                 <button type="submit" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                   {editingProject ? 'Save Changes' : 'Create Project'}
+                 </button>
                </div>
              </form>
           </div>
