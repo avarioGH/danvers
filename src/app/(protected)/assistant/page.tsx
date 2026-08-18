@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { Send, Mic, MicOff, Brain, Zap, RefreshCw, Trash2, ChevronDown, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 interface Message {
   id: string
@@ -39,13 +40,37 @@ export default function AssistantPage() {
   const voiceModeRef = useRef(false)
   const recognitionRef = useRef<any>(null)
 
+  const supabase = createClient()
+
   useEffect(() => {
-    setMessages([{
-      id: '0',
-      role: 'assistant',
-      content: welcomeMessageContent,
-      timestamp: new Date(),
-    }])
+    const fetchHistory = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      
+      const { data, error } = await supabase.from('chat_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+      
+      if (!error && data && data.length > 0) {
+        const formatted = data.map(m => ({
+          id: m.id,
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          timestamp: new Date(m.created_at)
+        }))
+        setMessages(formatted)
+      } else {
+        setMessages([{
+          id: '0',
+          role: 'assistant',
+          content: welcomeMessageContent,
+          timestamp: new Date(),
+        }])
+      }
+    }
+    
+    fetchHistory()
     
     // Load voices early
     if (typeof window !== 'undefined' && window.speechSynthesis) {
