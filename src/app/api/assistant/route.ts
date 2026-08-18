@@ -90,19 +90,19 @@ async function callJuanRouter(apiKey: string, systemPrompt: string, messages: an
 
   for (const model of fallbackModels) {
     try {
-      console.log(\`[Juan Router] Attempting model: \${model}...\`)
+      console.log(`[Juan Router] Attempting model: ${model}...`)
       const response = await openai.chat.completions.create({
         model: model,
         messages: formattedMessages as any,
       })
       return response.choices[0].message.content || ''
     } catch (err: any) {
-      console.warn(\`[Juan Router] Model \${model} failed:\`, err.message)
+      console.warn(`[Juan Router] Model ${model} failed:`, err.message)
       lastError = err
     }
   }
 
-  throw new Error(\`All Juan Router fallback models failed. Last error: \${lastError?.message}\`)
+  throw new Error(`All Juan Router fallback models failed. Last error: ${lastError?.message}`)
 }
 
 export async function POST(request: NextRequest) {
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('ALL AI PROVIDERS FAILED:', error)
     return NextResponse.json(
-      { content: \`System error: All AI networks are currently unreachable. \${error.message}\` },
+      { content: `System error: All AI networks are currently unreachable. ${error.message}` },
       { status: 500 }
     )
   }
