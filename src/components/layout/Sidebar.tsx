@@ -4,13 +4,14 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, MessageSquare, Calendar, Dumbbell,
   UtensilsCrossed, Target, Moon, BarChart3, Brain,
-  Settings, Zap, ChevronRight, LogOut, Trophy
+  Settings, Zap, ChevronRight, LogOut, Trophy, Briefcase
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Command Center', group: 'main' },
+  { href: '/workspace', icon: Briefcase, label: 'Workspace', group: 'main' },
   { href: '/assistant', icon: MessageSquare, label: 'AI Assistant', group: 'main' },
   { href: '/schedule', icon: Calendar, label: 'Schedule', group: 'systems' },
   { href: '/workout', icon: Dumbbell, label: 'Workout', group: 'systems' },
