@@ -7,42 +7,45 @@ const getSystemPrompt = (
   memories: any[], 
   tasks: any[], 
   habits: any[], 
-  projects: any[]
+  projects: any[],
+  workouts: any[],
+  goals: any[]
 ) => `You are DANVERS - a highly intelligent, calm, and strategic personal AI operating system.
 
 ---
 [BILINGUAL DIRECTIVE]
-You MUST adapt to the language the user speaks. 
-- If the user types in Indonesian, reply entirely in fluent, professional, yet helpful Indonesian.
-- If the user types in English, reply in English.
+Adapt to the language the user speaks. If Indonesian, use fluent, professional Indonesian. If English, use English.
 ---
 
 [CONTEXT DATA (LIVE FROM DATABASE)]
-Here is the real-time data of the user:
 - MEMORIES: ${memories.length > 0 ? memories.map(m => m.content).join(' | ') : 'None'}
-- UPCOMING TASKS: ${tasks.length > 0 ? tasks.map(t => `[${t.title} - Due: ${t.scheduled_date || 'N/A'} - Priority: ${t.priority}]`).join(', ') : 'No pending tasks.'}
+- UPCOMING TASKS: ${tasks.length > 0 ? tasks.map(t => `[${t.title} - Due: ${t.scheduled_date || 'N/A'}]`).join(', ') : 'None'}
 - HABITS: ${habits.length > 0 ? habits.map(h => h.name).join(', ') : 'None'}
 - PROJECTS: ${projects.length > 0 ? projects.map(p => `[ID: ${p.id}, Name: ${p.name}]`).join(', ') : 'None'}
+- WORKOUTS: ${workouts.length > 0 ? workouts.map(w => `[${w.name} on ${w.workout_date} - ${w.is_completed ? 'Done' : 'Pending'}]`).join(', ') : 'None'}
+- GOALS: ${goals.length > 0 ? goals.map(g => `[${g.title} - Progress: ${g.current_value}/${g.target_value} ${g.unit}]`).join(', ') : 'None'}
 
 ---
 [ACTION PROTOCOLS]
-You have the ability to execute actions by outputting special tags at the END of your response.
-
-1. SAVE MEMORY:
-If the user shares an important personal fact, append:
-[SAVE_MEMORY: the fact you learned]
-
-2. CREATE TASK:
-If the user asks you to add a task/to-do list, append the following tag exactly as formatted:
-[ACTION: CREATE_TASK | <Task Title> | <low/medium/high> | <YYYY-MM-DD or leave blank if no deadline>]
-Example: [ACTION: CREATE_TASK | Bikin website portfolio | medium | 2026-08-21]
-Note: If a project ID is specified in the prompt or clearly implied, you can optionally include it as a 5th pipe: | <Project ID>
+You have FULL control over the user's system. You can execute actions by appending a JSON block at the VERY END of your response.
+Format EXACTLY like this (use triple backticks with json):
+\`\`\`json
+{
+  "actions": [
+    { "type": "CREATE_TASK", "title": "...", "priority": "medium", "date": "YYYY-MM-DD" },
+    { "type": "CREATE_WORKOUT", "name": "...", "date": "YYYY-MM-DD", "target_muscle": "..." },
+    { "type": "SAVE_MEMORY", "content": "..." }
+  ]
+}
+\`\`\`
+- ONLY output the JSON block if you need to execute actions (e.g. user asks to schedule workout, add task, or states a fact to remember).
+- Do NOT wrap the JSON block inside any other text. It must be the last thing in your message.
+- "date" MUST be in YYYY-MM-DD format.
 
 ---
 [PERSONALITY]
-- Calm, confident, and precise.
-- You are not just a chatbot; you are their personal operating system.
-- Sound like the AI from Iron Man (J.A.R.V.I.S) - sophisticated and always one step ahead.
+- Calm, confident, precise.
+- Sound like J.A.R.V.I.S from Iron Man. You are their personal OS.
 `
 
 async function callGemini(apiKey: string, systemPrompt: string, messages: any[]) {
@@ -134,18 +137,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch live DB Context
-    const [memsRes, tasksRes, habitsRes, projRes] = await Promise.all([
+    const [memsRes, tasksRes, habitsRes, projRes, workoutsRes, goalsRes] = await Promise.all([
       supabase.from('ai_memories').select('content').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
       supabase.from('tasks').select('title, scheduled_date, priority').eq('user_id', user.id).eq('is_completed', false).limit(10),
       supabase.from('habits').select('name').eq('user_id', user.id).eq('is_active', true).limit(5),
-      supabase.from('projects').select('id, name').limit(10) // Workspaces
+      supabase.from('projects').select('id, name').limit(10),
+      supabase.from('workouts').select('name, workout_date, is_completed').eq('user_id', user.id).order('workout_date', { ascending: false }).limit(5),
+      supabase.from('goals').select('title, current_value, target_value, unit').eq('user_id', user.id).eq('status', 'active').limit(5)
     ])
 
     const systemPrompt = getSystemPrompt(
       memsRes.data || [], 
       tasksRes.data || [], 
       habitsRes.data || [], 
-      projRes.data || []
+      projRes.data || [],
+      workoutsRes.data || [],
+      goalsRes.data || []
     )
 
     let responseText = ''
@@ -161,40 +168,45 @@ export async function POST(request: NextRequest) {
 
     let finalDisplayResponse = responseText
 
-    // --- Action Parsing Logic ---
-
-    // 1. SAVE MEMORY
-    const memoryMatch = responseText.match(/\[SAVE_MEMORY:\s*(.*?)\]/)
-    if (memoryMatch) {
-      await supabase.from('ai_memories').insert({
-        user_id: user.id,
-        content: memoryMatch[1],
-        title: 'Extracted Fact',
-        importance: 'medium'
-      })
-      finalDisplayResponse = finalDisplayResponse.replace(/\[SAVE_MEMORY:.*?\]/g, '').trim()
-    }
-
-    // 2. CREATE TASK
-    // Tag Format: [ACTION: CREATE_TASK | title | priority | date | optional_project_id]
-    const taskMatches = responseText.matchAll(/\[ACTION:\s*CREATE_TASK\s*\|\s*(.*?)\s*\|\s*(low|medium|high)\s*\|\s*(.*?)\s*(?:\|\s*(.*?)\s*)?\]/g)
-    
-    for (const match of Array.from(taskMatches)) {
-      const title = match[1].trim()
-      const priority = match[2].trim()
-      const dateStr = match[3].trim()
-      const projectId = match[4] ? match[4].trim() : null
-
-      await supabase.from('tasks').insert({
-        user_id: user.id,
-        title: title,
-        priority: priority,
-        scheduled_date: dateStr || null,
-        project_id: projectId || null,
-        assigned_to: user.id
-      })
-      // Strip action block from message
-      finalDisplayResponse = finalDisplayResponse.replace(match[0], '').trim()
+    // --- Action Parsing Logic (JSON Based) ---
+    const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/)
+    if (jsonMatch) {
+      try {
+        const payload = JSON.parse(jsonMatch[1])
+        if (payload.actions && Array.isArray(payload.actions)) {
+          for (const action of payload.actions) {
+            if (action.type === 'SAVE_MEMORY') {
+              await supabase.from('ai_memories').insert({
+                user_id: user.id,
+                content: action.content,
+                title: 'Extracted Fact',
+                importance: 'medium'
+              })
+            }
+            if (action.type === 'CREATE_TASK') {
+              await supabase.from('tasks').insert({
+                user_id: user.id,
+                title: action.title,
+                priority: action.priority || 'medium',
+                scheduled_date: action.date || null,
+                assigned_to: user.id
+              })
+            }
+            if (action.type === 'CREATE_WORKOUT') {
+              await supabase.from('workouts').insert({
+                user_id: user.id,
+                name: action.name,
+                workout_date: action.date || new Date().toISOString().split('T')[0],
+                target_muscle: action.target_muscle || null
+              })
+            }
+          }
+        }
+        // Remove JSON block from the final user-facing response
+        finalDisplayResponse = finalDisplayResponse.replace(jsonMatch[0], '').trim()
+      } catch (err) {
+        console.error('Failed to parse AI action JSON:', err)
+      }
     }
 
     // Save AI Response to DB
