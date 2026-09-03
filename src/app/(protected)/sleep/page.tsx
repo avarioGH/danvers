@@ -184,7 +184,7 @@ export default function SleepPage() {
                 </defs>
                 <XAxis dataKey="date" tick={{ fill: '#4a6580', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis domain={[0, 100]} tick={{ fill: '#4a6580', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: 'rgba(4,15,30,0.95)', border: '1px solid rgba(0,212,255,0.3)', borderRadius: 10 }} />
+                <Tooltip cursor={{ stroke: 'rgba(99,102,241,0.2)', strokeWidth: 2 }} contentStyle={{ background: 'rgba(4,15,30,0.95)', border: '1px solid rgba(0,212,255,0.3)', borderRadius: 10 }} />
                 <Area type="monotone" dataKey="quality" stroke="#6366f1" strokeWidth={2} fill="url(#sqGrad)" dot={{ fill: '#6366f1', r: 3 }} />
               </AreaChart>
             ) : (
@@ -227,7 +227,7 @@ export default function SleepPage() {
             <BarChart data={sleepData} barSize={24} barGap={4}>
               <XAxis dataKey="date" tick={{ fill: '#4a6580', fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#4a6580', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'rgba(4,15,30,0.95)', border: '1px solid rgba(0,212,255,0.3)', borderRadius: 10 }} />
+              <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }} contentStyle={{ background: 'rgba(4,15,30,0.95)', border: '1px solid rgba(0,212,255,0.3)', borderRadius: 10 }} />
               <Bar dataKey="deep" fill="#1a6fff" stackId="a" radius={[0, 0, 0, 0]} />
               <Bar dataKey="rem" fill="#a855f7" stackId="a" radius={[0, 0, 0, 0]} />
               <Bar dataKey="hours" fill="rgba(0,212,255,0.1)" stackId="b" radius={[4, 4, 0, 0]} />
