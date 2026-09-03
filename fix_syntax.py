@@ -1,4 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+import re
+
+with open('src/app/api/assistant/route.ts', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# We need to find the definition of `const getSystemPrompt = ...` all the way up to `END OF DANVERS SYSTEM PROMPT`...`
+
+# Actually, it's easier to just overwrite the entire file with the correct content.
+file_content = """import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import OpenAI from 'openai'
@@ -226,7 +234,7 @@ Your response should be plain text.
 If emphasis is needed, use wording rather than formatting.
 
 [CRITICAL EXCEPTION FOR ACTIONS]
-You ARE ALLOWED and REQUIRED to use <JARVIS_ACTION> JSON payload </JARVIS_ACTION> ONLY at the very end of your response when you need to execute system actions (Task/Workout creation).
+You ARE ALLOWED and REQUIRED to use exactly one markdown code block (\`\`\`json) ONLY at the very end of your response when you need to execute system actions (Task/Workout creation).
 
 ==================================================
 18. LIST FORMATTING
@@ -354,9 +362,9 @@ You have FULL control over the user's system to read and write data.
 - GOALS: ${goals.length > 0 ? goals.map(g => `[${g.title} - Progress: ${g.current_value}/${g.target_value} ${g.unit}]`).join(', ') : 'None'}
 
 [EXECUTION INSTRUCTIONS]
-To execute actions (creating tasks, scheduling workouts, or saving memory), append a JSON block at the VERY END of your response, wrapped inside <JARVIS_ACTION> tags.
+To execute actions (creating tasks, scheduling workouts, or saving memory), append a JSON block at the VERY END of your response.
 Format EXACTLY like this:
-<JARVIS_ACTION>
+\`\`\`json
 {
   "actions": [
     { "type": "CREATE_TASK", "title": "...", "priority": "medium", "date": "YYYY-MM-DD" },
@@ -364,9 +372,9 @@ Format EXACTLY like this:
     { "type": "SAVE_MEMORY", "content": "..." }
   ]
 }
-</JARVIS_ACTION>
-- ONLY output the <JARVIS_ACTION> block if you need to execute actions.
-- Do NOT wrap the block inside any other text. It must be the last thing in your message.
+\`\`\`
+- ONLY output the JSON block if you need to execute actions.
+- Do NOT wrap the JSON block inside any other text. It must be the last thing in your message.
 - "date" MUST be in YYYY-MM-DD format.
 
 END OF DANVERS SYSTEM PROMPT`
@@ -375,22 +383,10 @@ async function callGemini(apiKey: string, systemPrompt: string, messages: any[])
   const ai = new GoogleGenerativeAI(apiKey)
   const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash', systemInstruction: systemPrompt })
 
-  const formattedMessages = messages.map((m: any) => {
-    const parts: any[] = []
-    if (m.attachment) {
-      parts.push({
-        inlineData: {
-          data: m.attachment.base64,
-          mimeType: m.attachment.type
-        }
-      })
-    }
-    parts.push({ text: m.content })
-    return {
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts
-    }
-  })
+  const formattedMessages = messages.map((m: any) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }))
 
   const chatHistory = formattedMessages.slice(0, -1)
   const firstUserIndex = chatHistory.findIndex((m: any) => m.role === 'user')
@@ -402,7 +398,7 @@ async function callGemini(apiKey: string, systemPrompt: string, messages: any[])
   })
 
   const chat = model.startChat({ history: validHistory })
-  const result = await chat.sendMessage(formattedMessages[formattedMessages.length - 1].parts)
+  const result = await chat.sendMessage(formattedMessages[formattedMessages.length - 1].parts[0].text)
   return result.response.text()
 }
 
@@ -503,8 +499,8 @@ export async function POST(request: NextRequest) {
 
     let finalDisplayResponse = responseText
 
-    // --- Action Parsing Logic (XML/JSON Based) ---
-    const jsonMatch = responseText.match(/<JARVIS_ACTION>\s*([\s\S]*?)\s*<\/JARVIS_ACTION>/)
+    // --- Action Parsing Logic (JSON Based) ---
+    const jsonMatch = responseText.match(/```json\s*([\\s\\S]*?)\s*```/)
     if (jsonMatch) {
       try {
         const payload = JSON.parse(jsonMatch[1])
@@ -560,3 +556,9 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+"""
+
+with open('src/app/api/assistant/route.ts', 'w', encoding='utf-8') as f:
+    f.write(file_content)
+
+print("Done fixing syntax")

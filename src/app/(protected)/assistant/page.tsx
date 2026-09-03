@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { Send, Mic, MicOff, Brain, Zap, RefreshCw, Trash2, ChevronDown, Loader2 } from 'lucide-react'
+import { Send, Mic, MicOff, Brain, Zap, RefreshCw, Trash2, ChevronDown, Loader2, Paperclip, FileText, Image as ImageIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Message {
@@ -31,6 +31,8 @@ export default function AssistantPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [attachment, setAttachment] = useState<{file: File, base64: string, type: string} | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -81,6 +83,22 @@ export default function AssistantPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 15 * 1024 * 1024) {
+      alert("File size must be less than 15MB")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      const base64 = result.split(',')[1]
+      setAttachment({ file, base64, type: file.type })
+    }
+    reader.readAsDataURL(file)
+  }
 
   const speakResponse = (text: string, onEndCallback?: () => void) => {
     const synth = window.speechSynthesis
@@ -235,17 +253,18 @@ export default function AssistantPage() {
   }
 
   const sendMessage = async (text: string = input) => {
-    if (!text.trim() || loading) return
+    if ((!text.trim() && !attachment) || loading) return
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: text.trim(),
+      content: text.trim() || (attachment ? `[Attached File: ${attachment.file.name}]` : ''),
       timestamp: new Date(),
     }
 
     setMessages(prev => [...prev, userMsg])
     setInput('')
+    setAttachment(null)
     setLoading(true)
 
     // Stop listening temporarily so the mic doesn't hear the TTS output
@@ -267,7 +286,13 @@ export default function AssistantPage() {
           messages: [...messages, userMsg].map(m => ({
             role: m.role,
             content: m.content,
-          })),
+          })).map((m, i, arr) => {
+            // Attach the file only to the latest user message
+            if (i === arr.length - 1 && attachment) {
+              return { ...m, attachment: { base64: attachment.base64, type: attachment.type } }
+            }
+            return m
+          }),
           apiKey
         }),
       })
@@ -475,9 +500,22 @@ export default function AssistantPage() {
         <div ref={bottomRef} />
       </div>
 
+
       {/* Input */}
       <div className="glass-card" style={{ padding: 16, flexShrink: 0 }}>
+        {attachment && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(0,212,255,0.1)', borderRadius: 8, width: 'fit-content', marginBottom: 10, border: '1px solid rgba(0,212,255,0.3)' }}>
+            {attachment.type.startsWith('image/') ? <ImageIcon size={14} color="#00d4ff" /> : <FileText size={14} color="#00d4ff" />}
+            <span style={{ fontSize: 12, color: '#e8f4ff', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{attachment.file.name}</span>
+            <button onClick={() => setAttachment(null)} style={{ background: 'none', border: 'none', color: '#ff3366', cursor: 'pointer', marginLeft: 8 }}><Trash2 size={12} /></button>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+          <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} accept="image/*,audio/*,video/*,application/pdf,text/plain" />
+          <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ padding: 10, flexShrink: 0 }} title="Attach File">
+            <Paperclip size={16} />
+          </button>
+
           <div style={{ flex: 1, position: 'relative' }}>
             <textarea
               ref={textareaRef}
@@ -499,9 +537,9 @@ export default function AssistantPage() {
           </button>
           <button
             onClick={() => sendMessage()}
-            disabled={loading || !input.trim()}
+            disabled={loading || (!input.trim() && !attachment)}
             className="btn-primary"
-            style={{ padding: '10px 16px', flexShrink: 0, opacity: loading || !input.trim() ? 0.5 : 1 }}
+            style={{ padding: '10px 16px', flexShrink: 0, opacity: loading || (!input.trim() && !attachment) ? 0.5 : 1 }}
           >
             <Send size={16} />
           </button>

@@ -1,9 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
-import OpenAI from 'openai'
+import re
 
-const getSystemPrompt = (
+# Read the file
+with open('src/app/api/assistant/route.ts', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Define the new getSystemPrompt function string
+new_prompt = '''const getSystemPrompt = (
   memories: any[], 
   tasks: any[], 
   habits: any[], 
@@ -226,7 +228,7 @@ Your response should be plain text.
 If emphasis is needed, use wording rather than formatting.
 
 [CRITICAL EXCEPTION FOR ACTIONS]
-You ARE ALLOWED and REQUIRED to use <JARVIS_ACTION> JSON payload </JARVIS_ACTION> ONLY at the very end of your response when you need to execute system actions (Task/Workout creation).
+You ARE ALLOWED and REQUIRED to use exactly one markdown code block (\`\`\`json) ONLY at the very end of your response when you need to execute system actions (Task/Workout creation).
 
 ==================================================
 18. LIST FORMATTING
@@ -354,9 +356,9 @@ You have FULL control over the user's system to read and write data.
 - GOALS: ${goals.length > 0 ? goals.map(g => `[${g.title} - Progress: ${g.current_value}/${g.target_value} ${g.unit}]`).join(', ') : 'None'}
 
 [EXECUTION INSTRUCTIONS]
-To execute actions (creating tasks, scheduling workouts, or saving memory), append a JSON block at the VERY END of your response, wrapped inside <JARVIS_ACTION> tags.
+To execute actions (creating tasks, scheduling workouts, or saving memory), append a JSON block at the VERY END of your response.
 Format EXACTLY like this:
-<JARVIS_ACTION>
+\`\`\`json
 {
   "actions": [
     { "type": "CREATE_TASK", "title": "...", "priority": "medium", "date": "YYYY-MM-DD" },
@@ -364,199 +366,19 @@ Format EXACTLY like this:
     { "type": "SAVE_MEMORY", "content": "..." }
   ]
 }
-</JARVIS_ACTION>
-- ONLY output the <JARVIS_ACTION> block if you need to execute actions.
-- Do NOT wrap the block inside any other text. It must be the last thing in your message.
+\`\`\`
+- ONLY output the JSON block if you need to execute actions.
+- Do NOT wrap the JSON block inside any other text. It must be the last thing in your message.
 - "date" MUST be in YYYY-MM-DD format.
 
 END OF DANVERS SYSTEM PROMPT`
+'''
 
-async function callGemini(apiKey: string, systemPrompt: string, messages: any[]) {
-  const ai = new GoogleGenerativeAI(apiKey)
-  const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash', systemInstruction: systemPrompt })
+# Use regex to replace the old getSystemPrompt entirely
+pattern = re.compile(r'const getSystemPrompt = \(.*?\)\s*=>\s*`.*?`', re.DOTALL)
+new_content = pattern.sub(new_prompt, content)
 
-  const formattedMessages = messages.map((m: any) => {
-    const parts: any[] = []
-    if (m.attachment) {
-      parts.push({
-        inlineData: {
-          data: m.attachment.base64,
-          mimeType: m.attachment.type
-        }
-      })
-    }
-    parts.push({ text: m.content })
-    return {
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts
-    }
-  })
+with open('src/app/api/assistant/route.ts', 'w', encoding='utf-8') as f:
+    f.write(new_content)
 
-  const chatHistory = formattedMessages.slice(0, -1)
-  const firstUserIndex = chatHistory.findIndex((m: any) => m.role === 'user')
-  let validHistory = firstUserIndex !== -1 ? chatHistory.slice(firstUserIndex) : []
-
-  validHistory = validHistory.filter((msg: any, i: number, arr: any[]) => {
-    if (i === 0) return msg.role === 'user'
-    return msg.role !== arr[i - 1].role
-  })
-
-  const chat = model.startChat({ history: validHistory })
-  const result = await chat.sendMessage(formattedMessages[formattedMessages.length - 1].parts)
-  return result.response.text()
-}
-
-async function callJuanRouter(apiKey: string, systemPrompt: string, messages: any[]) {
-  const baseUrl = process.env.JUAN_BASE_URL || 'https://router.juan.web.id/v1'
-  const openai = new OpenAI({ apiKey, baseURL: baseUrl })
-  
-  const formattedMessages = [
-    { role: 'system', content: systemPrompt },
-    ...messages.map((m: any) => ({ role: m.role, content: m.content }))
-  ]
-
-  const fallbackModels = [
-    'agnes-2.0-flash',
-    'gemma-4-31b-it',
-    'laguna-s-2.1',
-    'laguna-xs-2.1',
-    'ling-3.0-flash-free',
-    'mistral-large'
-  ]
-
-  let lastError = null
-
-  for (const model of fallbackModels) {
-    try {
-      console.log(`[Juan Router] Attempting model: ${model}...`)
-      const response = await openai.chat.completions.create({
-        model: model,
-        messages: formattedMessages as any,
-      })
-      return response.choices[0].message.content || ''
-    } catch (err: any) {
-      console.warn(`[Juan Router] Model ${model} failed:`, err.message)
-      lastError = err
-    }
-  }
-
-  throw new Error(`All Juan Router fallback models failed. Last error: ${lastError?.message}`)
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const { messages, apiKey: clientApiKey } = await request.json()
-    const geminiKey = clientApiKey || process.env.GEMINI_API_KEY
-    const juanKey = process.env.JUAN_API_KEY
-    const supabase = await createClient()
-
-    if (!geminiKey && !juanKey) {
-      return NextResponse.json({
-        content: 'DANVERS AI is offline. Please configure your API Keys in Settings or .env.'
-      })
-    }
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ content: 'Unauthorized' }, { status: 401 })
-    }
-    
-    // Save User Message to DB
-    const latestMessage = messages[messages.length - 1]
-    if (latestMessage.role === 'user') {
-      await supabase.from('chat_history').insert({
-        user_id: user.id,
-        role: 'user',
-        content: latestMessage.content
-      })
-    }
-
-    // Fetch live DB Context
-    const [memsRes, tasksRes, habitsRes, projRes, workoutsRes, goalsRes] = await Promise.all([
-      supabase.from('ai_memories').select('content').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
-      supabase.from('tasks').select('title, scheduled_date, priority').eq('user_id', user.id).eq('is_completed', false).limit(10),
-      supabase.from('habits').select('name').eq('user_id', user.id).eq('is_active', true).limit(5),
-      supabase.from('projects').select('id, name').limit(10),
-      supabase.from('workouts').select('name, workout_date, is_completed').eq('user_id', user.id).order('workout_date', { ascending: false }).limit(5),
-      supabase.from('goals').select('title, current_value, target_value, unit').eq('user_id', user.id).eq('status', 'active').limit(5)
-    ])
-
-    const systemPrompt = getSystemPrompt(
-      memsRes.data || [], 
-      tasksRes.data || [], 
-      habitsRes.data || [], 
-      projRes.data || [],
-      workoutsRes.data || [],
-      goalsRes.data || []
-    )
-
-    let responseText = ''
-
-    try {
-      if (!geminiKey) throw new Error('No Gemini Key')
-      responseText = await callGemini(geminiKey, systemPrompt, messages)
-    } catch (geminiError: any) {
-      console.warn('Gemini AI failed, falling back to Juan Router...', geminiError.message)
-      if (!juanKey) throw new Error('Gemini failed and no Fallback Key available.')
-      responseText = await callJuanRouter(juanKey, systemPrompt, messages)
-    }
-
-    let finalDisplayResponse = responseText
-
-    // --- Action Parsing Logic (XML/JSON Based) ---
-    const jsonMatch = responseText.match(/<JARVIS_ACTION>\s*([\s\S]*?)\s*<\/JARVIS_ACTION>/)
-    if (jsonMatch) {
-      try {
-        const payload = JSON.parse(jsonMatch[1])
-        if (payload.actions && Array.isArray(payload.actions)) {
-          for (const action of payload.actions) {
-            if (action.type === 'SAVE_MEMORY') {
-              await supabase.from('ai_memories').insert({
-                user_id: user.id,
-                content: action.content,
-                title: 'Extracted Fact',
-                importance: 'medium'
-              })
-            }
-            if (action.type === 'CREATE_TASK') {
-              await supabase.from('tasks').insert({
-                user_id: user.id,
-                title: action.title,
-                priority: action.priority || 'medium',
-                scheduled_date: action.date || null,
-                assigned_to: user.id
-              })
-            }
-            if (action.type === 'CREATE_WORKOUT') {
-              await supabase.from('workouts').insert({
-                user_id: user.id,
-                name: action.name,
-                workout_date: action.date || new Date().toISOString().split('T')[0],
-                target_muscle: action.target_muscle || null
-              })
-            }
-          }
-        }
-        // Remove JSON block from the final user-facing response
-        finalDisplayResponse = finalDisplayResponse.replace(jsonMatch[0], '').trim()
-      } catch (err) {
-        console.error('Failed to parse AI action JSON:', err)
-      }
-    }
-
-    // Save AI Response to DB
-    await supabase.from('chat_history').insert({
-      user_id: user.id,
-      role: 'assistant',
-      content: finalDisplayResponse
-    })
-
-    return NextResponse.json({ content: finalDisplayResponse })
-  } catch (error: any) {
-    console.error('ALL AI PROVIDERS FAILED:', error)
-    return NextResponse.json(
-      { content: `System error: All AI networks are currently unreachable. ${error.message}` },
-      { status: 500 }
-    )
-  }
-}
+print("Done")
