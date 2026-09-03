@@ -226,7 +226,7 @@ Your response should be plain text.
 If emphasis is needed, use wording rather than formatting.
 
 [CRITICAL EXCEPTION FOR ACTIONS]
-You ARE ALLOWED and REQUIRED to use exactly one markdown code block (\`\`\`json) ONLY at the very end of your response when you need to execute system actions (Task/Workout creation).
+You ARE ALLOWED and REQUIRED to use <JARVIS_ACTION> JSON payload </JARVIS_ACTION> ONLY at the very end of your response when you need to execute system actions (Task/Workout creation).
 
 ==================================================
 18. LIST FORMATTING
@@ -354,9 +354,9 @@ You have FULL control over the user's system to read and write data.
 - GOALS: ${goals.length > 0 ? goals.map(g => `[${g.title} - Progress: ${g.current_value}/${g.target_value} ${g.unit}]`).join(', ') : 'None'}
 
 [EXECUTION INSTRUCTIONS]
-To execute actions (creating tasks, scheduling workouts, or saving memory), append a JSON block at the VERY END of your response.
+To execute actions (creating tasks, scheduling workouts, or saving memory), append a JSON block at the VERY END of your response, wrapped inside <JARVIS_ACTION> tags.
 Format EXACTLY like this:
-\`\`\`json
+<JARVIS_ACTION>
 {
   "actions": [
     { "type": "CREATE_TASK", "title": "...", "priority": "medium", "date": "YYYY-MM-DD" },
@@ -364,9 +364,9 @@ Format EXACTLY like this:
     { "type": "SAVE_MEMORY", "content": "..." }
   ]
 }
-\`\`\`
-- ONLY output the JSON block if you need to execute actions.
-- Do NOT wrap the JSON block inside any other text. It must be the last thing in your message.
+</JARVIS_ACTION>
+- ONLY output the <JARVIS_ACTION> block if you need to execute actions.
+- Do NOT wrap the block inside any other text. It must be the last thing in your message.
 - "date" MUST be in YYYY-MM-DD format.
 
 END OF DANVERS SYSTEM PROMPT`
@@ -491,8 +491,8 @@ export async function POST(request: NextRequest) {
 
     let finalDisplayResponse = responseText
 
-    // --- Action Parsing Logic (JSON Based) ---
-    const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/)
+    // --- Action Parsing Logic (XML/JSON Based) ---
+    const jsonMatch = responseText.match(/<JARVIS_ACTION>\s*([\s\S]*?)\s*<\/JARVIS_ACTION>/)
     if (jsonMatch) {
       try {
         const payload = JSON.parse(jsonMatch[1])
