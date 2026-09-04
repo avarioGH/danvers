@@ -354,13 +354,14 @@ You have FULL control over the user's system to read and write data.
 - GOALS: ${goals.length > 0 ? goals.map(g => `[${g.title} - Progress: ${g.current_value}/${g.target_value} ${g.unit}]`).join(', ') : 'None'}
 
 [EXECUTION INSTRUCTIONS]
-To execute actions (creating tasks, scheduling workouts, or saving memory), append a JSON block at the VERY END of your response, wrapped inside <JARVIS_ACTION> tags.
+To execute actions (creating tasks, scheduling workouts, logging sleep, or saving memory), append a JSON block at the VERY END of your response, wrapped inside <JARVIS_ACTION> tags.
 Format EXACTLY like this:
 <JARVIS_ACTION>
 {
   "actions": [
     { "type": "CREATE_TASK", "title": "...", "priority": "medium", "date": "YYYY-MM-DD" },
     { "type": "CREATE_WORKOUT", "name": "...", "date": "YYYY-MM-DD", "target_muscle": "..." },
+    { "type": "LOG_SLEEP", "date": "YYYY-MM-DD", "hours": 8, "quality": 80 },
     { "type": "SAVE_MEMORY", "content": "..." }
   ]
 }
@@ -533,6 +534,20 @@ export async function POST(request: NextRequest) {
                 name: action.name,
                 workout_date: action.date || new Date().toISOString().split('T')[0],
                 target_muscle: action.target_muscle || null
+              })
+            }
+            if (action.type === 'LOG_SLEEP') {
+              const bedDate = new Date()
+              bedDate.setDate(bedDate.getDate() - 1)
+              const bedtimeStr = `${bedDate.toLocaleDateString('en-CA')}T22:00:00.000Z`
+              const wakeTimeStr = `${action.date || new Date().toISOString().split('T')[0]}T06:00:00.000Z`
+              await supabase.from('sleep_logs').upsert({
+                user_id: user.id,
+                sleep_date: action.date || new Date().toISOString().split('T')[0],
+                bedtime: bedtimeStr, // Mocked for simplicity when AI logs
+                wake_time: wakeTimeStr, // Mocked for simplicity when AI logs
+                duration_hours: action.hours || 8,
+                quality_score: action.quality || 80
               })
             }
           }
