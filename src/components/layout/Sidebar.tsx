@@ -4,12 +4,13 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, MessageSquare, Calendar, Dumbbell,
   UtensilsCrossed, Target, Moon, BarChart3, Brain,
-  Settings, Zap, ChevronRight, LogOut, Trophy, Briefcase
+  Settings, Zap, ChevronRight, LogOut, Trophy, Briefcase, Terminal
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 const navItems = [
+  { href: '/jarvis', icon: Terminal, label: 'Jarvis Engineering', group: 'main' },
   { href: '/dashboard', icon: LayoutDashboard, label: 'Command Center', group: 'main' },
   { href: '/workspace', icon: Briefcase, label: 'Workspace', group: 'main' },
   { href: '/assistant', icon: MessageSquare, label: 'AI Assistant', group: 'main' },

@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TaskStore } from '@/lib/jarvis/task-store';
+import { getAuthenticatedUser } from '@/lib/jarvis/auth-helper';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { id } = await params;
   const task = await TaskStore.getTask(id);
 
@@ -19,20 +25,26 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized: Authentication required.' }, { status: 401 });
+  }
+
   try {
     const { id } = await params;
     const body = await req.json();
 
     if (body.action === 'resolve_approval') {
-      const { approved, resolvedBy, reason } = body;
-      if (typeof approved !== 'boolean' || !resolvedBy) {
+      const { approved, reason } = body;
+      if (typeof approved !== 'boolean') {
         return NextResponse.json(
-          { error: 'Fields approved (boolean) and resolvedBy (string) are required.' },
+          { error: 'Field `approved` (boolean) is required.' },
           { status: 400 }
         );
       }
 
-      const updated = await TaskStore.resolveApproval(id, approved, resolvedBy, reason);
+      // Explicitly pass server-authenticated user email as resolvedBy to prevent spoofing
+      const updated = await TaskStore.resolveApproval(id, approved, user.email, reason);
       return NextResponse.json({ task: updated });
     }
 

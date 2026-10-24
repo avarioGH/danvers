@@ -1,12 +1,50 @@
-import type { JarvisTask, TaskStatus, TaskLogEntry, ApprovalRequest } from './types';
+import fs from 'fs';
+import path from 'path';
+import { JarvisTask, TaskStatus, TaskLogEntry, ApprovalRequest } from './types';
 import { TaskStateMachine } from './state-machine';
+import { PermissionPolicyService } from './permission-policy';
 
 export class TaskStore {
-  // In-memory durable store with support for persistence hook
+  private static readonly DB_DIR = path.resolve(process.cwd(), 'data', 'jarvis');
+  private static readonly DB_FILE = path.join(TaskStore.DB_DIR, 'tasks.json');
   private static tasks: Map<string, JarvisTask> = new Map();
+  private static initialized = false;
 
-  public static async createTask(task: Omit<JarvisTask, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'attempts' | 'logs'>): Promise<JarvisTask> {
-    const id = `task_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  private static ensureInitialized() {
+    if (this.initialized) return;
+    try {
+      if (!fs.existsSync(this.DB_DIR)) {
+        fs.mkdirSync(this.DB_DIR, { recursive: true });
+      }
+      if (fs.existsSync(this.DB_FILE)) {
+        const raw = fs.readFileSync(this.DB_FILE, 'utf-8');
+        const list: JarvisTask[] = JSON.parse(raw);
+        this.tasks.clear();
+        for (const t of list) {
+          this.tasks.set(t.id, t);
+        }
+      }
+    } catch (err) {
+      console.error('[TaskStore] Error loading durable store:', err);
+    }
+    this.initialized = true;
+  }
+
+  private static persist() {
+    try {
+      this.ensureInitialized();
+      const list = Array.from(this.tasks.values());
+      const tempPath = `${this.DB_FILE}.tmp`;
+      fs.writeFileSync(tempPath, JSON.stringify(list, null, 2), 'utf-8');
+      fs.renameSync(tempPath, this.DB_FILE);
+    } catch (err) {
+      console.error('[TaskStore] Persistence error:', err);
+    }
+  }
+
+  public static async createTask(task: Omit<JarvisTask, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'attempts' | 'logs'> & { userId?: string }): Promise<JarvisTask> {
+    this.ensureInitialized();
+    const id = PermissionPolicyService.generateSecureId('task');
     const now = new Date().toISOString();
     
     const newTask: JarvisTask = {
@@ -20,20 +58,23 @@ export class TaskStore {
         {
           timestamp: now,
           level: 'info',
-          message: `Task created and entered 'queued' state.`
+          message: PermissionPolicyService.redactSecrets(`Task created and entered 'queued' state for project '${task.scope.workspaceRoot}'.`)
         }
       ]
     };
 
     this.tasks.set(id, newTask);
+    this.persist();
     return newTask;
   }
 
   public static async getTask(id: string): Promise<JarvisTask | null> {
+    this.ensureInitialized();
     return this.tasks.get(id) || null;
   }
 
-  public static async listTasks(filter?: { status?: TaskStatus; limit?: number }): Promise<JarvisTask[]> {
+  public static async listTasks(filter?: { status?: TaskStatus; limit?: number; userId?: string }): Promise<JarvisTask[]> {
+    this.ensureInitialized();
     let result = Array.from(this.tasks.values());
     if (filter?.status) {
       result = result.filter(t => t.status === filter.status);
@@ -46,6 +87,7 @@ export class TaskStore {
   }
 
   public static async updateTaskStatus(id: string, newStatus: TaskStatus, logMessage?: string): Promise<JarvisTask> {
+    this.ensureInitialized();
     const task = this.tasks.get(id);
     if (!task) {
       throw new Error(`Task with id '${id}' not found.`);
@@ -70,15 +112,17 @@ export class TaskStore {
       task.logs.push({
         timestamp: now,
         level: newStatus === 'failed' ? 'error' : 'info',
-        message: logMessage
+        message: PermissionPolicyService.redactSecrets(logMessage)
       });
     }
 
     this.tasks.set(id, task);
+    this.persist();
     return task;
   }
 
   public static async attachApprovalRequest(id: string, approval: Omit<ApprovalRequest, 'id' | 'requestedAt' | 'status'>): Promise<JarvisTask> {
+    this.ensureInitialized();
     const task = this.tasks.get(id);
     if (!task) {
       throw new Error(`Task with id '${id}' not found.`);
@@ -89,7 +133,7 @@ export class TaskStore {
 
     const approvalRequest: ApprovalRequest = {
       ...approval,
-      id: `appr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: PermissionPolicyService.generateSecureId('appr'),
       status: 'pending',
       requestedAt: now
     };
@@ -100,24 +144,43 @@ export class TaskStore {
     task.logs.push({
       timestamp: now,
       level: 'warn',
-      message: `Task halted. Requires approval for action: '${approval.action}' on '${approval.target}'.`
+      message: PermissionPolicyService.redactSecrets(`Action requires authorization: '${approval.action}' on '${approval.target}'.`)
     });
 
     this.tasks.set(id, task);
+    this.persist();
     return task;
   }
 
-  public static async resolveApproval(taskId: string, approved: boolean, resolvedBy: string, reason?: string): Promise<JarvisTask> {
+  public static async resolveApproval(
+    taskId: string,
+    approved: boolean,
+    resolvedBy: string,
+    reason?: string
+  ): Promise<JarvisTask> {
+    this.ensureInitialized();
     const task = this.tasks.get(taskId);
-    if (!task || !task.approvalRequest) {
-      throw new Error(`Task or approval request not found for id '${taskId}'.`);
+    if (!task) {
+      throw new Error(`Task '${taskId}' not found.`);
+    }
+
+    if (!task.approvalRequest) {
+      throw new Error(`No approval request attached to task '${taskId}'.`);
+    }
+
+    if (task.approvalRequest.status !== 'pending') {
+      throw new Error(`Approval request '${task.approvalRequest.id}' is already resolved with status '${task.approvalRequest.status}'.`);
+    }
+
+    if (task.status !== 'awaiting_approval') {
+      throw new Error(`Cannot resolve approval for task in '${task.status}' state.`);
     }
 
     const now = new Date().toISOString();
     task.approvalRequest.status = approved ? 'approved' : 'rejected';
     task.approvalRequest.resolvedAt = now;
     task.approvalRequest.resolvedBy = resolvedBy;
-    if (reason) task.approvalRequest.rejectionReason = reason;
+    if (reason) task.approvalRequest.rejectionReason = PermissionPolicyService.redactSecrets(reason);
 
     if (approved) {
       TaskStateMachine.validateTransition(task.status, 'running');
@@ -125,7 +188,7 @@ export class TaskStore {
       task.logs.push({
         timestamp: now,
         level: 'info',
-        message: `Approval granted by ${resolvedBy}. Resuming task execution.`
+        message: `Approval GRANTED by ${resolvedBy}. Resuming task execution.`
       });
     } else {
       TaskStateMachine.validateTransition(task.status, 'cancelled');
@@ -133,20 +196,37 @@ export class TaskStore {
       task.logs.push({
         timestamp: now,
         level: 'warn',
-        message: `Approval rejected by ${resolvedBy}: ${reason || 'No reason provided'}. Task cancelled.`
+        message: `Approval REJECTED by ${resolvedBy}: ${reason || 'No justification provided'}. Task cancelled.`
       });
     }
 
     task.updatedAt = now;
     this.tasks.set(taskId, task);
+    this.persist();
     return task;
   }
 
   public static async appendLog(taskId: string, log: TaskLogEntry): Promise<void> {
+    this.ensureInitialized();
     const task = this.tasks.get(taskId);
     if (task) {
-      task.logs.push(log);
+      task.logs.push({
+        ...log,
+        message: PermissionPolicyService.redactSecrets(log.message)
+      });
       task.updatedAt = new Date().toISOString();
+      this.persist();
     }
+  }
+
+  public static async listApprovals(): Promise<ApprovalRequest[]> {
+    this.ensureInitialized();
+    const list: ApprovalRequest[] = [];
+    for (const task of this.tasks.values()) {
+      if (task.approvalRequest) {
+        list.push(task.approvalRequest);
+      }
+    }
+    return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
   }
 }

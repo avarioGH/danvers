@@ -1,0 +1,126 @@
+[
+  {
+    "title": "Audit DB Migrations",
+    "type": "security_audit",
+    "permissionLevel": 1,
+    "scope": {
+      "workspaceRoot": "D:\\Danvers\\jarvis-os",
+      "allowedPaths": []
+    },
+    "maxAttempts": 3,
+    "id": "task_1dbe56d194644e630259a85fd3ec5884",
+    "status": "cancelled",
+    "createdAt": "2026-10-24T11:26:51.338Z",
+    "updatedAt": "2026-10-24T11:26:51.341Z",
+    "attempts": 1,
+    "logs": [
+      {
+        "timestamp": "2026-10-24T11:26:51.338Z",
+        "level": "info",
+        "message": "Task created and entered 'queued' state for project 'D:\\Danvers\\jarvis-os'."
+      },
+      {
+        "timestamp": "2026-10-24T11:26:51.340Z",
+        "level": "warn",
+        "message": "Action requires authorization: 'deploy_production' on 'prod-cluster-01'."
+      },
+      {
+        "timestamp": "2026-10-24T11:26:51.341Z",
+        "level": "warn",
+        "message": "Approval REJECTED by SecurityAdmin@danvers.jarvis: Missing vulnerability scan. Task cancelled."
+      }
+    ],
+    "startedAt": "2026-10-24T11:26:51.340Z",
+    "approvalRequest": {
+      "taskId": "task_1dbe56d194644e630259a85fd3ec5884",
+      "action": "deploy_production",
+      "target": "prod-cluster-01",
+      "description": "Deploying release v2.0 to production",
+      "id": "appr_11bb6c5de8798cd222f653b449de8963",
+      "status": "rejected",
+      "requestedAt": "2026-10-24T11:26:51.340Z",
+      "resolvedAt": "2026-10-24T11:26:51.341Z",
+      "resolvedBy": "SecurityAdmin@danvers.jarvis",
+      "rejectionReason": "Missing vulnerability scan"
+    }
+  },
+  {
+    "title": "Deploy to Production App",
+    "type": "deployment",
+    "permissionLevel": 3,
+    "scope": {
+      "workspaceRoot": "D:/Danvers/workspaces/test-project",
+      "allowedPaths": []
+    },
+    "maxAttempts": 2,
+    "id": "task_0c63371f9605fe38c41095f495374808",
+    "status": "cancelled",
+    "createdAt": "2026-10-24T11:26:57.222Z",
+    "updatedAt": "2026-10-24T11:26:57.225Z",
+    "attempts": 1,
+    "logs": [
+      {
+        "timestamp": "2026-10-24T11:26:57.222Z",
+        "level": "info",
+        "message": "Task created and entered 'queued' state for project 'D:/Danvers/workspaces/test-project'."
+      },
+      {
+        "timestamp": "2026-10-24T11:26:57.225Z",
+        "level": "warn",
+        "message": "Action requires authorization: 'deploy_production' on 'production-vps-01'."
+      },
+      {
+        "timestamp": "2026-10-24T11:26:57.225Z",
+        "level": "warn",
+        "message": "Approval REJECTED by SecurityOfficer: Rollback plan missing. Task cancelled."
+      }
+    ],
+    "startedAt": "2026-10-24T11:26:57.224Z",
+    "approvalRequest": {
+      "taskId": "task_0c63371f9605fe38c41095f495374808",
+      "action": "deploy_production",
+      "target": "production-vps-01",
+      "description": "Deploying release v1.0.0 to live production environment",
+      "id": "appr_64c6b2b78e4f478414cc887337b40609",
+      "status": "rejected",
+      "requestedAt": "2026-10-24T11:26:57.225Z",
+      "resolvedAt": "2026-10-24T11:26:57.225Z",
+      "resolvedBy": "SecurityOfficer",
+      "rejectionReason": "Rollback plan missing"
+    }
+  },
+  {
+    "title": "Analyze codebase for security hardening and rate limiting",
+    "description": "Perform read-only review of API routes and suggest security controls",
+    "type": "code_read",
+    "permissionLevel": 1,
+    "scope": {
+      "workspaceRoot": "D:\\Danvers\\jarvis-os",
+      "allowedPaths": [],
+      "readOnly": true
+    },
+    "maxAttempts": 2,
+    "id": "task_70912bcdca9e9edd4357c72af81b111c",
+    "status": "queued",
+    "createdAt": "2026-10-24T11:27:37.788Z",
+    "updatedAt": "2026-10-24T11:27:45.113Z",
+    "attempts": 0,
+    "logs": [
+      {
+        "timestamp": "2026-10-24T11:27:37.788Z",
+        "level": "info",
+        "message": "Task created and entered 'queued' state for project 'D:\\Danvers\\jarvis-os'."
+      },
+      {
+        "timestamp": "2026-10-24T11:27:37.791Z",
+        "level": "info",
+        "message": "Analyzing project structure (43 files scanned) using qwen2.5-coder:3b..."
+      },
+      {
+        "timestamp": "2026-10-24T11:27:45.113Z",
+        "level": "info",
+        "message": "Analysis completed in 7321ms at 58.88 tokens/sec."
+      }
+    ]
+  }
+]

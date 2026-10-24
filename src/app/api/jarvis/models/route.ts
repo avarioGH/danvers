@@ -1,19 +1,31 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser } from '@/lib/jarvis/auth-helper';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const providers: Record<string, unknown> = {
     local_ollama: {
       endpoint: 'http://127.0.0.1:11434',
-      status: 'checking'
+      status: 'checking',
+      reachable: false
     },
     cloud_gemini: {
-      status: process.env.GEMINI_API_KEY ? 'configured' : 'missing_key'
+      configured: Boolean(process.env.GEMINI_API_KEY),
+      status: process.env.GEMINI_API_KEY ? 'active' : 'unconfigured',
+      reachable: Boolean(process.env.GEMINI_API_KEY)
     },
     cloud_openai: {
-      status: process.env.OPENAI_API_KEY ? 'configured' : 'missing_key'
+      configured: Boolean(process.env.OPENAI_API_KEY),
+      status: process.env.OPENAI_API_KEY ? 'active' : 'unconfigured',
+      reachable: Boolean(process.env.OPENAI_API_KEY)
     }
   };
 
+  // Test real Ollama HTTP connectivity
   try {
     const res = await fetch('http://127.0.0.1:11434/api/tags', {
       method: 'GET',
@@ -25,15 +37,18 @@ export async function GET() {
       providers.local_ollama = {
         endpoint: 'http://127.0.0.1:11434',
         status: 'online',
-        models: data.models?.map((m: { name: string; size: number }) => ({
+        reachable: true,
+        models: data.models?.map((m: { name: string; size: number; details?: { parameter_size?: string } }) => ({
           name: m.name,
-          sizeBytes: m.size
+          sizeBytes: m.size,
+          parameterSize: m.details?.parameter_size
         }))
       };
     } else {
       providers.local_ollama = {
         endpoint: 'http://127.0.0.1:11434',
         status: 'error',
+        reachable: false,
         statusCode: res.status
       };
     }
@@ -42,6 +57,7 @@ export async function GET() {
     providers.local_ollama = {
       endpoint: 'http://127.0.0.1:11434',
       status: 'offline',
+      reachable: false,
       error: error.message
     };
   }

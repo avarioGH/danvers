@@ -1,21 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TaskStore } from '@/lib/jarvis/task-store';
 import { JarvisTask, TaskStatus } from '@/lib/jarvis/types';
+import { getAuthenticatedUser } from '@/lib/jarvis/auth-helper';
 
 export async function GET(req: NextRequest) {
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized: Authentication required.' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status') as TaskStatus | null;
   const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 50;
 
   const tasks = await TaskStore.listTasks({
     status: status || undefined,
-    limit
+    limit,
+    userId: user.id
   });
 
   return NextResponse.json({ tasks });
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized: Authentication required.' }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
 
@@ -26,7 +38,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const newTask: Omit<JarvisTask, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'attempts' | 'logs'> = {
+    const newTask: Omit<JarvisTask, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'attempts' | 'logs'> & { userId?: string } = {
       title: body.title,
       description: body.description || '',
       type: body.type,
@@ -37,7 +49,8 @@ export async function POST(req: NextRequest) {
         readOnly: body.scope.readOnly ?? false
       },
       maxAttempts: body.maxAttempts || 3,
-      workerId: body.workerId
+      workerId: body.workerId || 'pc_worker_local',
+      userId: user.id
     };
 
     const task = await TaskStore.createTask(newTask);
