@@ -15,7 +15,6 @@ export class WorkerRegistry {
   private static initialized = false;
 
   private static ensureInitialized() {
-    if (this.initialized) return;
     try {
       if (!fs.existsSync(this.DB_DIR)) {
         fs.mkdirSync(this.DB_DIR, { recursive: true });
