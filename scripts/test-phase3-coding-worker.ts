@@ -97,14 +97,14 @@ console.log('MATH TESTS PASSED');
   console.log('5. Testing Safe Process Runner Policy Enforcement...');
   
   // Disallowed executable (e.g. powershell, cmd, bash)
-  const disallowedRun = SafeProcessRunner.execute('powershell', ['-Command', 'dir'], { cwd: workspace.worktreePath });
+  const disallowedRun = await SafeProcessRunner.executeAsync('powershell', ['-Command', 'dir'], { cwd: workspace.worktreePath });
   assert.strictEqual(disallowedRun.passed, false);
   assert.strictEqual(disallowedRun.exitCode, 126);
   assert.match(disallowedRun.output, /is not in the approved process runner whitelist/);
   console.log('   Disallowed executable rejected by policy.');
 
   // Approved command execution: node test runner
-  const testRun = SafeProcessRunner.execute('node', ['--check', 'test/math.test.js'], { cwd: workspace.worktreePath });
+  const testRun = await SafeProcessRunner.executeAsync('node', ['--check', 'test/math.test.js'], { cwd: workspace.worktreePath });
   assert.strictEqual(testRun.passed, true);
   assert.strictEqual(testRun.exitCode, 0);
   console.log('   Approved syntax & execution check passed.');

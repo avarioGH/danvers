@@ -57,7 +57,7 @@ export class CodingWorkerEngine {
       if (testVerification) {
         await TaskStore.updateTaskStatus(task.id, 'testing', `Running verification: ${testVerification.executable} ${testVerification.args.join(' ')}`);
         
-        let testRun = SafeProcessRunner.execute(
+        let testRun = await SafeProcessRunner.executeAsync(
           testVerification.executable,
           testVerification.args,
           { cwd: workspace.worktreePath, timeoutMs: 30000 }
@@ -90,7 +90,7 @@ Analyze this error and suggest a fix.`;
           });
 
           // Re-run test to evaluate
-          testRun = SafeProcessRunner.execute(
+          testRun = await SafeProcessRunner.executeAsync(
             testVerification.executable,
             testVerification.args,
             { cwd: workspace.worktreePath, timeoutMs: 30000 }
