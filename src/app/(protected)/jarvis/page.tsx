@@ -8,7 +8,8 @@ import {
   FileCode2, CheckCircle, Ban, Filter, Search, ChevronRight,
   Maximize2, Minimize2, PanelLeftClose, PanelLeft, PanelRightClose,
   PanelRight, FileText, Activity, AlertCircle, Copy, Laptop,
-  HelpCircle, Eye, GitCommit, UserCheck, ShieldCheck
+  HelpCircle, Eye, GitCommit, UserCheck, ShieldCheck, FolderPlus,
+  Trash2, ChevronDown, File
 } from 'lucide-react';
 
 interface TaskScope {
@@ -78,6 +79,7 @@ interface Project {
   name: string;
   rootPath: string;
   description?: string;
+  custom?: boolean;
   git?: { branch: string; clean: boolean; error?: string };
 }
 
@@ -104,11 +106,21 @@ interface ProviderStatus {
   cloud_openai?: { configured: boolean; status: string; reachable: boolean };
 }
 
+interface FileTreeItem {
+  name: string;
+  relativePath: string;
+  isDirectory: boolean;
+  sizeBytes?: number;
+  modifiedAt?: string;
+  extension?: string;
+  children?: FileTreeItem[];
+}
+
 export default function JarvisAgentWorkspace() {
   // Navigation & Panel States
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
-  const [activeNav, setActiveNav] = useState<'workspace' | 'tasks' | 'approvals' | 'workers' | 'projects'>('workspace');
+  const [activeNav, setActiveNav] = useState<'workspace' | 'files' | 'tasks' | 'approvals' | 'workers' | 'projects'>('workspace');
 
   // Backend Data States
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -139,6 +151,18 @@ export default function JarvisAgentWorkspace() {
   const [taskFilterStatus, setTaskFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // File Explorer State
+  const [fileTree, setFileTree] = useState<FileTreeItem[]>([]);
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState<string | null>(null);
+  const [loadingFiles, setLoadingFiles] = useState(false);
+
+  // Workspace Modal / Registration
+  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectPath, setNewProjectPath] = useState('');
+  const [newProjectDesc, setNewProjectDesc] = useState('');
+
   // Fetch telemetry & state from backend
   const fetchTelemetry = async () => {
     setIsRefreshing(true);
@@ -154,7 +178,6 @@ export default function JarvisAgentWorkspace() {
         const d = await resTasks.json();
         const incomingTasks: Task[] = d.tasks || [];
         setTasks(incomingTasks);
-        // Default select latest task if none selected
         if (!selectedTaskId && incomingTasks.length > 0) {
           setSelectedTaskId(incomingTasks[0].id);
         }
@@ -193,6 +216,38 @@ export default function JarvisAgentWorkspace() {
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch file explorer tree when selected project changes
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    setLoadingFiles(true);
+    fetch(`/api/jarvis/files?root=${encodeURIComponent(selectedProjectId)}`)
+      .then(res => res.json())
+      .then(data => {
+        setFileTree(data.items || []);
+        setLoadingFiles(false);
+      })
+      .catch(err => {
+        console.error('Failed to load file tree:', err);
+        setLoadingFiles(false);
+      });
+  }, [selectedProjectId]);
+
+  // Fetch file content when file is selected
+  const handleSelectFile = (relPath: string) => {
+    setSelectedFilePath(relPath);
+    setFileContent(null);
+    fetch(`/api/jarvis/files?root=${encodeURIComponent(selectedProjectId)}&file=${encodeURIComponent(relPath)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.content !== undefined) {
+          setFileContent(data.content);
+        } else {
+          setFileContent(`[Error reading file: ${data.error || 'Unknown error'}]`);
+        }
+      })
+      .catch(err => setFileContent(`[Fetch error: ${err.message}]`));
+  };
+
   const selectedTask = useMemo(() => {
     return tasks.find(t => t.id === selectedTaskId) || tasks[0] || null;
   }, [tasks, selectedTaskId]);
@@ -205,7 +260,6 @@ export default function JarvisAgentWorkspace() {
     return tasks.filter(t => t.status === 'awaiting_approval' && t.approvalRequest?.status === 'pending');
   }, [tasks]);
 
-  // Derived worker health
   const onlineWorkersCount = useMemo(() => {
     return workers.filter(w => w.status === 'active').length;
   }, [workers]);
@@ -232,7 +286,7 @@ export default function JarvisAgentWorkspace() {
           workerId: selectedWorkerId,
           scope: {
             workspaceRoot: selectedProjectId,
-            allowedPaths: [],
+            allowedPaths: selectedFilePath ? [selectedFilePath] : [],
             readOnly: selectedTaskType === 'code_read' || selectedTaskType === 'security_audit'
           }
         })
@@ -248,7 +302,6 @@ export default function JarvisAgentWorkspace() {
       setDirectiveDescription('');
       setSubmitFeedback({ type: 'success', text: 'Directive registered to persistent queue.' });
 
-      // Refresh and switch to newly created task
       await fetchTelemetry();
       if (created.task?.id) {
         setSelectedTaskId(created.task.id);
@@ -260,7 +313,7 @@ export default function JarvisAgentWorkspace() {
     }
   };
 
-  // Run analysis
+  // Run analysis / execution
   const handleTriggerAnalysis = async (taskId: string) => {
     setAnalyzingTaskId(taskId);
     try {
@@ -305,7 +358,53 @@ export default function JarvisAgentWorkspace() {
     }
   };
 
-  // Filtered task list
+  // Register New Workspace
+  const handleAddProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProjectName.trim() || !newProjectPath.trim()) return;
+
+    try {
+      const res = await fetch('/api/jarvis/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newProjectName.trim(),
+          rootPath: newProjectPath.trim(),
+          description: newProjectDesc.trim()
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Failed to add project: ${err.error}`);
+        return;
+      }
+
+      const d = await res.json();
+      setShowAddProjectModal(false);
+      setNewProjectName('');
+      setNewProjectPath('');
+      setNewProjectDesc('');
+      await fetchTelemetry();
+      setSelectedProjectId(d.workspace.rootPath);
+    } catch (err) {
+      alert(`Network error: ${(err as Error).message}`);
+    }
+  };
+
+  // Delete Custom Workspace
+  const handleDeleteProject = async (id: string) => {
+    if (!confirm('Remove workspace from Jarvis? (Files on disk will remain untouched)')) return;
+    try {
+      const res = await fetch(`/api/jarvis/projects?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await fetchTelemetry();
+      }
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  };
+
   const filteredTasks = useMemo(() => {
     return tasks.filter(t => {
       const matchesStatus = taskFilterStatus === 'all' || t.status === taskFilterStatus;
@@ -313,6 +412,47 @@ export default function JarvisAgentWorkspace() {
       return matchesStatus && matchesSearch;
     });
   }, [tasks, taskFilterStatus, searchQuery]);
+
+  // Recursive tree component
+  const renderTree = (items: FileTreeItem[]) => {
+    return (
+      <div className="space-y-0.5 font-mono text-xs">
+        {items.map(item => (
+          <div key={item.relativePath}>
+            {item.isDirectory ? (
+              <details className="group">
+                <summary className="flex items-center gap-1.5 py-1 px-2 rounded hover:bg-neutral-800/40 cursor-pointer text-neutral-300">
+                  <ChevronRight className="w-3.5 h-3.5 text-neutral-500 group-open:rotate-90 transition-transform" />
+                  <FolderGit2 className="w-3.5 h-3.5 text-cyan-500/80" />
+                  <span className="truncate">{item.name}</span>
+                </summary>
+                <div className="pl-4 border-l border-neutral-800/60 ml-2">
+                  {item.children && renderTree(item.children)}
+                </div>
+              </details>
+            ) : (
+              <button
+                onClick={() => handleSelectFile(item.relativePath)}
+                className={`w-full flex items-center justify-between py-1 px-2 rounded text-left transition ${
+                  selectedFilePath === item.relativePath
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'
+                }`}
+              >
+                <span className="flex items-center gap-1.5 truncate">
+                  <FileCode2 className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                  <span className="truncate">{item.name}</span>
+                </span>
+                <span className="text-[10px] text-neutral-600 shrink-0">
+                  {item.sizeBytes ? `${(item.sizeBytes / 1024).toFixed(1)}k` : ''}
+                </span>
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#07090e] text-neutral-200 font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
@@ -324,7 +464,6 @@ export default function JarvisAgentWorkspace() {
           sidebarOpen ? 'w-64 min-w-[16rem]' : 'w-16 min-w-[4rem]'
         } flex flex-col justify-between border-r border-neutral-800/80 bg-[#0a0d14]/95 transition-all duration-300 ease-in-out z-20 backdrop-blur-md`}
       >
-        {/* Top Header & Brand */}
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4 border-b border-neutral-800/60">
             {sidebarOpen ? (
@@ -357,12 +496,21 @@ export default function JarvisAgentWorkspace() {
             </button>
           </div>
 
-          {/* Project Selector */}
+          {/* Project Selector & Add Button */}
           {sidebarOpen && (
             <div className="p-3 border-b border-neutral-800/40">
-              <label className="block text-[10px] uppercase font-mono tracking-wider text-neutral-500 mb-1.5">
-                Active Sandbox Workspace
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[10px] uppercase font-mono tracking-wider text-neutral-500">
+                  Active Sandbox Workspace
+                </label>
+                <button
+                  onClick={() => setShowAddProjectModal(true)}
+                  className="p-1 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-950/40 rounded transition"
+                  title="Register new project folder"
+                >
+                  <FolderPlus className="w-3.5 h-3.5" />
+                </button>
+              </div>
               <div className="relative">
                 <select
                   value={selectedProjectId}
@@ -395,6 +543,7 @@ export default function JarvisAgentWorkspace() {
           <nav className="p-2 space-y-1">
             {[
               { id: 'workspace', label: 'Agent Workspace', icon: Layers },
+              { id: 'files', label: 'File Explorer', icon: FileCode2 },
               { id: 'tasks', label: `Directives (${tasks.length})`, icon: ListTodo },
               {
                 id: 'approvals',
@@ -438,7 +587,7 @@ export default function JarvisAgentWorkspace() {
                   <Laptop className="w-3.5 h-3.5 text-cyan-400" /> Windows Local:
                 </span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded ${localOllamaOnline ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50' : 'bg-red-950/80 text-red-400 border border-red-800/50'}`}>
-                  {localOllamaOnline ? 'ONLINE' : 'OFFLINE'}
+                  {localOllamaOnline ? 'ONLINE (Ollama)' : 'OFFLINE'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -459,20 +608,19 @@ export default function JarvisAgentWorkspace() {
       </aside>
 
       {/* =========================================================================
-          COLUMN B: MAIN WORKSPACE (DIRECTIVE EDITOR, CHAT STREAM, TASK FEED)
+          COLUMN B: MAIN WORKSPACE (DIRECTIVE EDITOR, FILE EXPLORER, LOGS)
           ========================================================================= */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#07090e]">
-        {/* Top Control Bar */}
         <header className="h-12 border-b border-neutral-800/80 bg-[#0a0d14]/70 px-4 flex items-center justify-between shrink-0 backdrop-blur-md">
           <div className="flex items-center gap-3 overflow-hidden">
             <span className="text-xs font-medium text-neutral-400 truncate">
               Workspace / <span className="text-neutral-200">{activeProject?.name || 'Workspace Root'}</span>
             </span>
-            {selectedTask && (
+            {selectedFilePath && (
               <>
                 <span className="text-neutral-600">/</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-neutral-900 border border-neutral-800 text-cyan-400 truncate">
-                  {selectedTask.id}
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/40 text-cyan-400 border border-cyan-800/40 truncate">
+                  {selectedFilePath}
                 </span>
               </>
             )}
@@ -511,7 +659,7 @@ export default function JarvisAgentWorkspace() {
                     <span>Dispatch Agent Directive</span>
                   </div>
                   <span className="text-[10px] font-mono text-neutral-500">
-                    Safe Execution Sandbox Enforced
+                    Target: {activeProject?.name || 'Workspace Root'}
                   </span>
                 </div>
 
@@ -561,7 +709,6 @@ export default function JarvisAgentWorkspace() {
                     />
                   </div>
 
-                  {/* Multi-parameter selectors: Type, Model, Worker */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                     <div>
                       <label className="block text-[10px] font-mono text-neutral-500 mb-1 uppercase">
@@ -602,8 +749,18 @@ export default function JarvisAgentWorkspace() {
                         onChange={e => setSelectedModel(e.target.value)}
                         className="w-full px-2.5 py-1.5 bg-[#080b12] border border-neutral-800 rounded text-xs text-neutral-200 focus:outline-none focus:border-cyan-500 font-mono"
                       >
-                        <option value="qwen2.5-coder:3b">Local: Qwen 2.5 Coder 3B</option>
-                        <option value="qwen3-coder:latest">Local: Qwen 3 Coder MoE</option>
+                        {providers?.local_ollama?.models && providers.local_ollama.models.length > 0 ? (
+                          providers.local_ollama.models.map(m => (
+                            <option key={m.name} value={m.name}>
+                              Local: {m.name}
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="qwen2.5-coder:3b">Local: Qwen 2.5 Coder 3B</option>
+                            <option value="qwen3-coder:latest">Local: Qwen 3 Coder MoE</option>
+                          </>
+                        )}
                         <option value="gemini-1.5-pro">Cloud: Gemini 1.5 Pro</option>
                       </select>
                     </div>
@@ -629,7 +786,6 @@ export default function JarvisAgentWorkspace() {
               {/* Directive Conversation / Inspection Stream */}
               {selectedTask ? (
                 <div className="bg-[#0c1018] border border-neutral-800/90 rounded-xl overflow-hidden shadow-xl">
-                  {/* Task Header Bar */}
                   <div className="p-4 border-b border-neutral-800/70 bg-[#0e131d] flex flex-wrap items-center justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -665,13 +821,12 @@ export default function JarvisAgentWorkspace() {
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-cyan-600/20 text-cyan-300 border border-cyan-600/40 hover:bg-cyan-600/30 transition disabled:opacity-50"
                         >
                           <Play className="w-3.5 h-3.5" />
-                          {analyzingTaskId === selectedTask.id ? 'Running Analysis...' : 'Run Agent Analysis'}
+                          {analyzingTaskId === selectedTask.id ? 'Running Execution...' : 'Run Agent Execution'}
                         </button>
                       )}
                     </div>
                   </div>
 
-                  {/* Task Execution Details & Logs */}
                   <div className="p-5 space-y-4">
                     {selectedTask.description && (
                       <div className="text-xs text-neutral-300 bg-[#080b12] p-3 rounded border border-neutral-800 font-mono">
@@ -793,7 +948,61 @@ export default function JarvisAgentWorkspace() {
             </div>
           )}
 
-          {/* TAB 2: DIRECTIVE QUEUE */}
+          {/* TAB 2: REAL FILE EXPLORER */}
+          {activeNav === 'files' && (
+            <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-[#0c1018] border border-neutral-800 rounded-xl p-4 flex flex-col h-[650px]">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-800 mb-3">
+                  <span className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                    <FolderGit2 className="w-4 h-4 text-cyan-400" /> Project Tree
+                  </span>
+                  <span className="text-[10px] font-mono text-neutral-500 truncate max-w-[140px]">
+                    {activeProject?.name}
+                  </span>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {loadingFiles ? (
+                    <div className="text-xs text-neutral-500 py-8 text-center">Loading files...</div>
+                  ) : fileTree.length === 0 ? (
+                    <div className="text-xs text-neutral-500 py-8 text-center">No files found.</div>
+                  ) : (
+                    renderTree(fileTree)
+                  )}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 bg-[#0c1018] border border-neutral-800 rounded-xl p-4 flex flex-col h-[650px]">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-800 mb-3">
+                  <span className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5 font-mono">
+                    <FileCode2 className="w-4 h-4 text-cyan-400" />
+                    {selectedFilePath || 'Select a file to inspect'}
+                  </span>
+                  {selectedFilePath && (
+                    <button
+                      onClick={() => {
+                        setDirectiveTitle(`Inspect and explain ${selectedFilePath}`);
+                        setActiveNav('workspace');
+                      }}
+                      className="text-[11px] font-mono px-2 py-1 bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 rounded hover:bg-cyan-900/60 transition"
+                    >
+                      Ask Agent About This File
+                    </button>
+                  )}
+                </div>
+                <div className="flex-1 bg-[#05070c] border border-neutral-900 rounded-lg p-3 font-mono text-xs overflow-auto text-neutral-300">
+                  {fileContent !== null ? (
+                    <pre className="whitespace-pre">{fileContent}</pre>
+                  ) : (
+                    <div className="text-neutral-600 text-center py-20 text-xs">
+                      Click any source file on the left to preview code contents.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: DIRECTIVE QUEUE */}
           {activeNav === 'tasks' && (
             <div className="max-w-5xl mx-auto space-y-4">
               <div className="bg-[#0c1018] border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -887,7 +1096,7 @@ export default function JarvisAgentWorkspace() {
             </div>
           )}
 
-          {/* TAB 3: APPROVALS CENTER */}
+          {/* TAB 4: APPROVALS CENTER */}
           {activeNav === 'approvals' && (
             <div className="max-w-4xl mx-auto space-y-4">
               <div className="bg-[#0c1018] border border-neutral-800 rounded-xl p-5">
@@ -942,7 +1151,7 @@ export default function JarvisAgentWorkspace() {
             </div>
           )}
 
-          {/* TAB 4: WORKERS TELEMETRY */}
+          {/* TAB 5: WORKERS TELEMETRY */}
           {activeNav === 'workers' && (
             <div className="max-w-5xl mx-auto space-y-4">
               <div className="bg-[#0c1018] border border-neutral-800 rounded-xl p-4 flex justify-between items-center">
@@ -998,7 +1207,7 @@ export default function JarvisAgentWorkspace() {
             </div>
           )}
 
-          {/* TAB 5: PROJECTS & SANDBOXES */}
+          {/* TAB 6: PROJECTS & SANDBOXES */}
           {activeNav === 'projects' && (
             <div className="max-w-5xl mx-auto space-y-4">
               <div className="bg-[#0c1018] border border-neutral-800 rounded-xl p-4 flex justify-between items-center">
@@ -1006,7 +1215,12 @@ export default function JarvisAgentWorkspace() {
                   <FolderGit2 className="w-4 h-4 text-cyan-400" />
                   <span className="text-sm font-semibold text-neutral-100">Registered Sandbox Workspaces</span>
                 </div>
-                <span className="text-xs font-mono text-neutral-500">{projects.length} workspace(s)</span>
+                <button
+                  onClick={() => setShowAddProjectModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600/20 border border-cyan-500/40 text-cyan-300 rounded text-xs font-mono hover:bg-cyan-600/30 transition"
+                >
+                  <FolderPlus className="w-3.5 h-3.5" /> Add Project
+                </button>
               </div>
 
               <div className="space-y-3">
@@ -1014,10 +1228,21 @@ export default function JarvisAgentWorkspace() {
                   <div key={p.id} className="bg-[#0c1018] border border-neutral-800 rounded-xl p-4 space-y-2">
                     <div className="flex justify-between items-center">
                       <h4 className="text-sm font-semibold text-white">{p.name}</h4>
-                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800 text-cyan-400 flex items-center gap-1">
-                        <GitBranch className="w-3 h-3" />
-                        {p.git?.branch || 'main'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800 text-cyan-400 flex items-center gap-1">
+                          <GitBranch className="w-3 h-3" />
+                          {p.git?.branch || 'main'}
+                        </span>
+                        {p.custom && (
+                          <button
+                            onClick={() => handleDeleteProject(p.id)}
+                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded transition"
+                            title="Remove project registration"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="text-xs font-mono text-neutral-400">{p.rootPath}</p>
                     <p className="text-xs text-neutral-500">{p.description}</p>
@@ -1030,7 +1255,7 @@ export default function JarvisAgentWorkspace() {
       </main>
 
       {/* =========================================================================
-          COLUMN C: RIGHT-SIDE CONTEXTUAL INSPECTOR (LIFECYCLE, MANIFEST, DIFF)
+          COLUMN C: RIGHT-SIDE CONTEXTUAL INSPECTOR
           ========================================================================= */}
       {inspectorOpen && (
         <aside className="w-80 min-w-[20rem] border-l border-neutral-800/80 bg-[#0a0d14]/95 flex flex-col justify-between overflow-y-auto z-20 backdrop-blur-md">
@@ -1051,7 +1276,6 @@ export default function JarvisAgentWorkspace() {
           <div className="p-4 space-y-5 text-xs font-mono">
             {selectedTask ? (
               <>
-                {/* Lifecycle Pipeline */}
                 <div>
                   <span className="text-[10px] text-neutral-500 uppercase tracking-wider block mb-2">
                     Execution Lifecycle
@@ -1099,7 +1323,6 @@ export default function JarvisAgentWorkspace() {
                   </div>
                 </div>
 
-                {/* Target Metadata */}
                 <div>
                   <span className="text-[10px] text-neutral-500 uppercase tracking-wider block mb-2">
                     Directive Metadata
@@ -1126,7 +1349,6 @@ export default function JarvisAgentWorkspace() {
                   </div>
                 </div>
 
-                {/* Artifact Manifest Verification */}
                 <div>
                   <span className="text-[10px] text-neutral-500 uppercase tracking-wider block mb-2">
                     Artifact Manifest Verification
@@ -1149,7 +1371,6 @@ export default function JarvisAgentWorkspace() {
             )}
           </div>
 
-          {/* Operator Footer Status */}
           <div className="p-4 border-t border-neutral-800/60 bg-[#070a10] text-[10px] font-mono text-neutral-500 flex justify-between items-center">
             <span>JARVIS STATUS // IDLE</span>
             <span>
@@ -1157,6 +1378,78 @@ export default function JarvisAgentWorkspace() {
             </span>
           </div>
         </aside>
+      )}
+
+      {/* MODAL: REGISTER NEW PROJECT WORKSPACE */}
+      {showAddProjectModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0c1018] border border-neutral-800 rounded-xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <FolderPlus className="w-4 h-4 text-cyan-400" /> Register Local Project Folder
+              </h3>
+              <button
+                onClick={() => setShowAddProjectModal(false)}
+                className="text-neutral-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddProject} className="space-y-3 font-mono text-xs">
+              <div>
+                <label className="block text-neutral-400 mb-1">PROJECT NAME</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. ERP Kayu"
+                  value={newProjectName}
+                  onChange={e => setNewProjectName(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#080b12] border border-neutral-800 rounded text-neutral-200 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-neutral-400 mb-1">CANONICAL FOLDER PATH</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. D:\Projects\ERP-Kayu"
+                  value={newProjectPath}
+                  onChange={e => setNewProjectPath(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#080b12] border border-neutral-800 rounded text-neutral-200 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-neutral-400 mb-1">DESCRIPTION (OPTIONAL)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Core manufacturing inventory module"
+                  value={newProjectDesc}
+                  onChange={e => setNewProjectDesc(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#080b12] border border-neutral-800 rounded text-neutral-200 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddProjectModal(false)}
+                  className="px-4 py-1.5 text-neutral-400 hover:text-neutral-200 text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-xs font-semibold transition"
+                >
+                  Register Workspace
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
