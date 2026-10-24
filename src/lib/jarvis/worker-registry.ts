@@ -11,6 +11,7 @@ export class WorkerRegistry {
   private static readonly AUDIT_FILE = path.join(WorkerRegistry.DB_DIR, 'audit_log.json');
   private static workers: Map<string, RemoteWorker> = new Map();
   private static activeLeases: Map<string, TaskLease> = new Map(); // taskId -> Lease
+  private static lastAuditHash = '0000000000000000000000000000000000000000000000000000000000000000';
   private static initialized = false;
 
   private static ensureInitialized() {
@@ -25,6 +26,18 @@ export class WorkerRegistry {
         this.workers.clear();
         for (const w of list) {
           this.workers.set(w.id, w);
+        }
+      }
+      // Read last line of audit file to obtain lastAuditHash
+      if (fs.existsSync(this.AUDIT_FILE)) {
+        const lines = fs.readFileSync(this.AUDIT_FILE, 'utf-8').trim().split('\n');
+        if (lines.length > 0 && lines[lines.length - 1].length > 0) {
+          try {
+            const lastEntry: AuditEvent = JSON.parse(lines[lines.length - 1]);
+            if (lastEntry.eventHash) {
+              this.lastAuditHash = lastEntry.eventHash;
+            }
+          } catch {}
         }
       }
     } catch (err) {
@@ -45,19 +58,24 @@ export class WorkerRegistry {
     }
   }
 
-  public static logAudit(event: Omit<AuditEvent, 'id' | 'timestamp'>): void {
-    try {
-      this.ensureInitialized();
-      const entry: AuditEvent = {
-        ...event,
-        id: PermissionPolicyService.generateSecureId('audit'),
-        timestamp: new Date().toISOString()
-      };
-      const line = JSON.stringify(entry) + '\n';
-      fs.appendFileSync(this.AUDIT_FILE, line, 'utf-8');
-    } catch (err) {
-      console.error('[WorkerRegistry] Audit logging error:', err);
-    }
+  public static logAudit(event: Omit<AuditEvent, 'id' | 'timestamp' | 'prevHash' | 'eventHash'>): AuditEvent {
+    this.ensureInitialized();
+    const timestamp = new Date().toISOString();
+    const prevHash = this.lastAuditHash;
+    const eventHash = WorkerCrypto.computeAuditHash(prevHash, event.eventType, event.actorId, timestamp, event.details);
+
+    const entry: AuditEvent = {
+      ...event,
+      id: PermissionPolicyService.generateSecureId('audit'),
+      timestamp,
+      prevHash,
+      eventHash
+    };
+
+    this.lastAuditHash = eventHash;
+    const line = JSON.stringify(entry) + '\n';
+    fs.appendFileSync(this.AUDIT_FILE, line, 'utf-8');
+    return entry;
   }
 
   /**
@@ -98,15 +116,18 @@ export class WorkerRegistry {
   }
 
   /**
-   * Authenticates an incoming worker request via bearer token.
+   * Authenticates an incoming worker request via bearer token using constant-time comparison.
    */
   public static async authenticateWorker(bearerToken: string): Promise<RemoteWorker | null> {
     if (!bearerToken || typeof bearerToken !== 'string') return null;
     this.ensureInitialized();
-    const tokenHash = WorkerCrypto.hashToken(bearerToken.replace(/^Bearer\s+/i, ''));
+    const token = bearerToken.replace(/^Bearer\s+/i, '').trim();
+    if (token.length < 32) return null;
+
+    const incomingHash = WorkerCrypto.hashToken(token);
 
     for (const worker of this.workers.values()) {
-      if (worker.tokenHash === tokenHash) {
+      if (WorkerCrypto.constantTimeCompare(worker.tokenHash, incomingHash)) {
         if (worker.status !== 'active') {
           this.logAudit({
             eventType: 'SECURITY_VIOLATION',
@@ -275,5 +296,36 @@ export class WorkerRegistry {
 
   public static getLease(taskId: string): TaskLease | null {
     return this.activeLeases.get(taskId) || null;
+  }
+
+  /**
+   * Verifies the cryptographic integrity of the entire audit chain.
+   */
+  public static verifyAuditChain(): { valid: boolean; totalEntries: number; tamperedIndex?: number } {
+    this.ensureInitialized();
+    if (!fs.existsSync(this.AUDIT_FILE)) {
+      return { valid: true, totalEntries: 0 };
+    }
+
+    const lines = fs.readFileSync(this.AUDIT_FILE, 'utf-8').trim().split('\n').filter(l => l.length > 0);
+    let expectedPrevHash = '0000000000000000000000000000000000000000000000000000000000000000';
+
+    for (let i = 0; i < lines.length; i++) {
+      try {
+        const entry: AuditEvent = JSON.parse(lines[i]);
+        if (entry.prevHash !== expectedPrevHash) {
+          return { valid: false, totalEntries: lines.length, tamperedIndex: i };
+        }
+        const recomputed = WorkerCrypto.computeAuditHash(entry.prevHash, entry.eventType, entry.actorId, entry.timestamp, entry.details);
+        if (recomputed !== entry.eventHash) {
+          return { valid: false, totalEntries: lines.length, tamperedIndex: i };
+        }
+        expectedPrevHash = entry.eventHash;
+      } catch {
+        return { valid: false, totalEntries: lines.length, tamperedIndex: i };
+      }
+    }
+
+    return { valid: true, totalEntries: lines.length };
   }
 }

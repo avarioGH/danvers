@@ -43,5 +43,96 @@
     ],
     "registeredAt": "2026-10-24T13:14:18.073Z",
     "lastHeartbeat": "2026-10-24T13:14:18.073Z"
+  },
+  {
+    "id": "wkr_c6967c185a80231ec5bc83a0584b09ad",
+    "name": "Hetzner Linux VPS 01",
+    "tokenHash": "532286dfa2b515c439353109c073b426ca65e74c5ef242984cb11aae0759dbe6",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "D:/Danvers/workspaces/authorized-project"
+    ],
+    "registeredAt": "2026-10-24T13:32:48.299Z",
+    "lastHeartbeat": "2026-10-24T13:32:48.299Z",
+    "currentTaskId": "task_aa50bdf7227f25fb7fe8fe0beec3ad36"
+  },
+  {
+    "id": "wkr_d22a280b1709e4324a9802bb7da08c53",
+    "name": "Secondary VPS 02",
+    "tokenHash": "114c06e949da580a081dab0d4d0881eb7ddf40ac6ced7e193e2ec538d4680de4",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T13:32:48.306Z",
+    "lastHeartbeat": "2026-10-24T13:32:48.306Z"
+  },
+  {
+    "id": "wkr_73630203ea83e27001d59c8b8ad0e22d",
+    "name": "Read-Only Worker",
+    "tokenHash": "8a7e18b3285e19747ac4cc1c5b0693adbbfac6ac3ef56bd963e41a08964a39bc",
+    "status": "active",
+    "capabilities": [
+      "code_read"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T13:32:48.306Z",
+    "lastHeartbeat": "2026-10-24T13:32:48.306Z"
+  },
+  {
+    "id": "wkr_2c176a2fc85db9afb391c15e2adc6ced",
+    "name": "Hetzner Linux VPS 01",
+    "tokenHash": "5db269d8e6fccfb9390424eb71b0fae9e54c0670b1f73cdd1aabf8f738e71bb2",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "D:/Danvers/workspaces/authorized-project"
+    ],
+    "registeredAt": "2026-10-24T13:33:02.277Z",
+    "lastHeartbeat": "2026-10-24T13:33:02.288Z"
+  },
+  {
+    "id": "wkr_e0229ce8eec1717121aa7439b9d41979",
+    "name": "Secondary VPS 02",
+    "tokenHash": "7e68f542ac09a9616331372cf4fea260540e52638acbeeda588240b16403037b",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T13:33:02.285Z",
+    "lastHeartbeat": "2026-10-24T13:33:02.285Z"
+  },
+  {
+    "id": "wkr_a34e3d19bddaea05ea7176d167b916fe",
+    "name": "Read-Only Worker",
+    "tokenHash": "934c3737b2ca8feefad6eb3b519905339ead36bb8a006cd64b141d5ebc145e2b",
+    "status": "active",
+    "capabilities": [
+      "code_read"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T13:33:02.286Z",
+    "lastHeartbeat": "2026-10-24T13:33:02.286Z"
   }
 ]
