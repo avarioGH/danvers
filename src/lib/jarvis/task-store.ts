@@ -121,6 +121,19 @@ export class TaskStore {
     return task;
   }
 
+  public static async attachWorkspaceInfo(id: string, workspace: import('./types').TaskWorkspaceInfo): Promise<JarvisTask> {
+    this.ensureInitialized();
+    const task = this.tasks.get(id);
+    if (!task) {
+      throw new Error(`Task with id '${id}' not found.`);
+    }
+    task.workspace = workspace;
+    task.updatedAt = new Date().toISOString();
+    this.tasks.set(id, task);
+    this.persist();
+    return task;
+  }
+
   public static async attachApprovalRequest(id: string, approval: Omit<ApprovalRequest, 'id' | 'requestedAt' | 'status'>): Promise<JarvisTask> {
     this.ensureInitialized();
     const task = this.tasks.get(id);

@@ -2,6 +2,8 @@ export type TaskStatus =
   | 'queued'
   | 'assigned'
   | 'running'
+  | 'reviewing_changes'
+  | 'testing'
   | 'awaiting_approval'
   | 'succeeded'
   | 'failed'
@@ -29,11 +31,21 @@ export interface ApprovalRequest {
   target: string;
   description: string;
   details?: Record<string, unknown>;
+  diffSnapshot?: string;
+  baseCommit?: string;
   requestedAt: string;
   status: 'pending' | 'approved' | 'rejected';
   resolvedAt?: string;
   resolvedBy?: string;
   rejectionReason?: string;
+}
+
+export interface TaskWorkspaceInfo {
+  worktreePath: string;
+  branchName: string;
+  baseCommit: string;
+  createdAt: string;
+  clean: boolean;
 }
 
 export interface JarvisTask {
@@ -53,11 +65,20 @@ export interface JarvisTask {
   maxAttempts: number;
   logs: TaskLogEntry[];
   approvalRequest?: ApprovalRequest;
+  workspace?: TaskWorkspaceInfo;
   result?: {
     success: boolean;
     summary: string;
     diff?: string;
     artifacts?: string[];
+    changedFiles?: string[];
+    testResults?: {
+      command: string;
+      exitCode: number;
+      passed: boolean;
+      output: string;
+      durationMs: number;
+    }[];
     error?: string;
   };
 }

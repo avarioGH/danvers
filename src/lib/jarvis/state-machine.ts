@@ -16,7 +16,9 @@ export class TaskStateMachine {
   private static readonly VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
     queued: ['assigned', 'cancelled'],
     assigned: ['running', 'cancelled', 'failed'],
-    running: ['awaiting_approval', 'succeeded', 'failed', 'cancelled'],
+    running: ['reviewing_changes', 'testing', 'awaiting_approval', 'succeeded', 'failed', 'cancelled'],
+    reviewing_changes: ['testing', 'awaiting_approval', 'running', 'failed', 'cancelled'],
+    testing: ['reviewing_changes', 'awaiting_approval', 'succeeded', 'failed', 'cancelled'],
     awaiting_approval: ['running', 'cancelled', 'failed'],
     succeeded: [], // terminal
     failed: ['queued'], // can retry if maxAttempts not exceeded
