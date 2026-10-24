@@ -33,7 +33,10 @@ export class CodingWorkerEngine {
   ): Promise<CodingTaskExecutionResult> {
     const repoPath = path.resolve(task.scope.workspaceRoot);
 
-    await TaskStore.updateTaskStatus(task.id, 'assigned', 'Worker assigned to coding task.');
+    const currentTask = await TaskStore.getTask(task.id);
+    if (currentTask && currentTask.status !== 'assigned') {
+      await TaskStore.updateTaskStatus(task.id, 'assigned', 'Worker assigned to coding task.');
+    }
     await TaskStore.updateTaskStatus(task.id, 'running', `Creating isolated Git worktree for repo '${repoPath}'...`);
 
     // 1. Create Git Worktree

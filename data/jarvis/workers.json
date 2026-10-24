@@ -254,5 +254,117 @@
     ],
     "registeredAt": "2026-10-24T13:52:27.635Z",
     "lastHeartbeat": "2026-10-24T13:52:27.635Z"
+  },
+  {
+    "id": "wkr_1db58656908a8c483083aee488bd91ef",
+    "name": "windows-local-e2e-worker",
+    "tokenHash": "2e4ebae379ae26e8f5265ddbdc907f2173c1a569632a417335193f72486ab941",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T15:15:04.496Z",
+    "lastHeartbeat": "2026-10-24T15:15:04.496Z"
+  },
+  {
+    "id": "wkr_8209b3022100ccd1931d956e854d57a7",
+    "name": "windows-local-e2e-worker",
+    "tokenHash": "8bb38f9a0fc7749dc083bdc41da70402f9cfcccf6bda80040fec2a58b6bc9de7",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T15:15:40.542Z",
+    "lastHeartbeat": "2026-10-24T15:15:40.542Z"
+  },
+  {
+    "id": "wkr_9d05c9d6b9b1699b67d86c2308deeead",
+    "name": "windows-local-e2e-worker",
+    "tokenHash": "3b66860d01ae05b680b0979ebe61225363b697ce651eb1e5502135f9a578ddef",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T15:15:52.841Z",
+    "lastHeartbeat": "2026-10-24T15:15:52.841Z"
+  },
+  {
+    "id": "wkr_67c60145d7097618b3d59d98eb895ab5",
+    "name": "windows-local-e2e-worker",
+    "tokenHash": "40be0cde4e82a631735170469a4e578060f58a6a7b30d05c9971b67c40401f24",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T15:16:07.130Z",
+    "lastHeartbeat": "2026-10-24T15:16:07.130Z"
+  },
+  {
+    "id": "wkr_0fd0a0ee238107a7484f8ac44d6b2378",
+    "name": "windows-local-e2e-worker",
+    "tokenHash": "3849967141158dd3726412b66a19d4fc4863e34b60ca7bf0a568c5e04a24755d",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T15:16:21.045Z",
+    "lastHeartbeat": "2026-10-24T15:16:21.045Z"
+  },
+  {
+    "id": "wkr_1ee1ce2b76d748060af2a8d2d952198f",
+    "name": "windows-local-e2e-worker",
+    "tokenHash": "4002c56a8b61c7111504d9870c7b0447c2191c4c1247cd5a1ecfadbb918981bb",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T15:16:39.007Z",
+    "lastHeartbeat": "2026-10-24T15:16:39.007Z"
+  },
+  {
+    "id": "wkr_3159e727511dbc473a9d2f88fa19d4cb",
+    "name": "windows-local-e2e-worker",
+    "tokenHash": "1a3a6071edc5c4df39d2738dd160e9f3351d93f5d28224d2a530a8e3208ad8d3",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T15:16:51.958Z",
+    "lastHeartbeat": "2026-10-24T15:16:51.958Z"
   }
 ]

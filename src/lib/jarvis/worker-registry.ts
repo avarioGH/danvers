@@ -102,8 +102,12 @@ export class WorkerRegistry {
       lastHeartbeat: now
     };
 
+    // Save to in-memory map then persist directly
     this.workers.set(id, worker);
-    this.persist();
+    const list = Array.from(this.workers.values());
+    const tmp = `${this.WORKERS_FILE}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(list, null, 2), 'utf-8');
+    fs.renameSync(tmp, this.WORKERS_FILE);
 
     this.logAudit({
       eventType: 'WORKER_REGISTERED',
