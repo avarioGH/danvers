@@ -34,6 +34,9 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = publicRoutes.some(r => pathname.startsWith(r))
 
   if (!user && !isPublicRoute) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized: Authentication required.' }, { status: 401 })
+    }
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
@@ -44,6 +47,9 @@ export async function middleware(request: NextRequest) {
     const isAllowed = ALLOWED_EMAILS.length === 0 || ALLOWED_EMAILS.includes(email)
 
     if (!isAllowed && !pathname.startsWith('/unauthorized')) {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Forbidden: User not authorized.' }, { status: 403 })
+      }
       const url = request.nextUrl.clone()
       url.pathname = '/unauthorized'
       return NextResponse.redirect(url)
