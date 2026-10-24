@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { execSync } from 'child_process';
-import { WorkerRegistry } from './src/lib/jarvis/worker-registry';
+import { WorkerRegistry } from '../src/lib/jarvis/worker-registry';
 
 async function main() {
   const reg = await WorkerRegistry.registerWorker(
