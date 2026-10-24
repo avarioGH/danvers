@@ -1414,5 +1414,288 @@
       "resolvedBy": "SecurityOfficer",
       "rejectionReason": "Rollback plan missing"
     }
+  },
+  {
+    "title": "Execute test suite on remote node",
+    "type": "test_run",
+    "permissionLevel": 1,
+    "scope": {
+      "workspaceRoot": "D:/Danvers/workspaces/authorized-vps-project",
+      "allowedPaths": []
+    },
+    "maxAttempts": 2,
+    "id": "task_a2d5b2b4841049a97850f28ab1ce2d7b",
+    "status": "assigned",
+    "createdAt": "2026-10-24T13:52:24.677Z",
+    "updatedAt": "2026-10-24T13:52:24.678Z",
+    "attempts": 0,
+    "logs": [
+      {
+        "timestamp": "2026-10-24T13:52:24.677Z",
+        "level": "info",
+        "message": "Task created and entered 'queued' state for project 'D:/Danvers/workspaces/authorized-vps-project'."
+      },
+      {
+        "timestamp": "2026-10-24T13:52:24.678Z",
+        "level": "info",
+        "message": "Task claimed by remote worker 'Remote Ubuntu VPS Node 01' (wkr_37ea70d8b6eb03c5c48951448f46d20c)."
+      }
+    ]
+  },
+  {
+    "title": "Edit code (unsupported by this worker)",
+    "type": "code_edit",
+    "permissionLevel": 2,
+    "scope": {
+      "workspaceRoot": "D:/Danvers/workspaces/authorized-vps-project",
+      "allowedPaths": []
+    },
+    "maxAttempts": 2,
+    "id": "task_2c9d099d0c296e9047ebfe9c56cb9b37",
+    "status": "queued",
+    "createdAt": "2026-10-24T13:52:24.679Z",
+    "updatedAt": "2026-10-24T13:52:24.679Z",
+    "attempts": 0,
+    "logs": [
+      {
+        "timestamp": "2026-10-24T13:52:24.679Z",
+        "level": "info",
+        "message": "Task created and entered 'queued' state for project 'D:/Danvers/workspaces/authorized-vps-project'."
+      }
+    ]
+  },
+  {
+    "title": "Run remote container test",
+    "type": "test_run",
+    "permissionLevel": 1,
+    "scope": {
+      "workspaceRoot": "D:/Danvers/workspaces/authorized-project",
+      "allowedPaths": []
+    },
+    "maxAttempts": 2,
+    "id": "task_120c605b580472537a34e38ca55179bb",
+    "status": "assigned",
+    "createdAt": "2026-10-24T13:52:27.631Z",
+    "updatedAt": "2026-10-24T13:52:27.633Z",
+    "attempts": 0,
+    "logs": [
+      {
+        "timestamp": "2026-10-24T13:52:27.631Z",
+        "level": "info",
+        "message": "Task created and entered 'queued' state for project 'D:/Danvers/workspaces/authorized-project'."
+      },
+      {
+        "timestamp": "2026-10-24T13:52:27.633Z",
+        "level": "info",
+        "message": "Task claimed by remote worker 'Hetzner Linux VPS 01' (wkr_4938cafb698a19917d7051ec5e3ff080)."
+      }
+    ]
+  },
+  {
+    "title": "Edit source file",
+    "type": "code_edit",
+    "permissionLevel": 2,
+    "scope": {
+      "workspaceRoot": "D:/Danvers/workspaces/authorized-project",
+      "allowedPaths": []
+    },
+    "maxAttempts": 2,
+    "id": "task_28444dc6e99adaaddfacdacef8ff960d",
+    "status": "queued",
+    "createdAt": "2026-10-24T13:52:27.636Z",
+    "updatedAt": "2026-10-24T13:52:27.636Z",
+    "attempts": 0,
+    "logs": [
+      {
+        "timestamp": "2026-10-24T13:52:27.636Z",
+        "level": "info",
+        "message": "Task created and entered 'queued' state for project 'D:/Danvers/workspaces/authorized-project'."
+      }
+    ]
+  },
+  {
+    "title": "Access private confidential repo",
+    "type": "code_read",
+    "permissionLevel": 1,
+    "scope": {
+      "workspaceRoot": "D:/Danvers/workspaces/super-secret-core",
+      "allowedPaths": []
+    },
+    "maxAttempts": 2,
+    "id": "task_40132bd70c681b7ee875cf841bacb36d",
+    "status": "queued",
+    "createdAt": "2026-10-24T13:52:27.636Z",
+    "updatedAt": "2026-10-24T13:52:27.636Z",
+    "attempts": 0,
+    "logs": [
+      {
+        "timestamp": "2026-10-24T13:52:27.636Z",
+        "level": "info",
+        "message": "Task created and entered 'queued' state for project 'D:/Danvers/workspaces/super-secret-core'."
+      }
+    ]
+  },
+  {
+    "title": "Implement positive integer validator with unit tests",
+    "type": "code_edit",
+    "permissionLevel": 2,
+    "scope": {
+      "workspaceRoot": "D:\\Danvers\\workspaces\\test-sandbox-repo",
+      "allowedPaths": []
+    },
+    "maxAttempts": 2,
+    "id": "task_cab85a769d050ca4f43c29686bd3068e",
+    "status": "running",
+    "createdAt": "2026-10-24T13:52:31.877Z",
+    "updatedAt": "2026-10-24T13:52:32.086Z",
+    "attempts": 1,
+    "logs": [
+      {
+        "timestamp": "2026-10-24T13:52:31.877Z",
+        "level": "info",
+        "message": "Task created and entered 'queued' state for project 'D:\\Danvers\\workspaces\\test-sandbox-repo'."
+      },
+      {
+        "timestamp": "2026-10-24T13:52:31.878Z",
+        "level": "info",
+        "message": "Worker assigned to coding task."
+      },
+      {
+        "timestamp": "2026-10-24T13:52:31.878Z",
+        "level": "info",
+        "message": "Creating isolated Git worktree for repo 'D:\\Danvers\\workspaces\\test-sandbox-repo'..."
+      },
+      {
+        "timestamp": "2026-10-24T13:52:31.982Z",
+        "level": "info",
+        "message": "Validating patch safety and applying edits..."
+      },
+      {
+        "timestamp": "2026-10-24T13:52:31.983Z",
+        "level": "info",
+        "message": "Running verification: node --check test/math.test.js"
+      },
+      {
+        "timestamp": "2026-10-24T13:52:32.085Z",
+        "level": "warn",
+        "message": "Action requires authorization: 'promote_code_to_main' on 'Branch jarvis/task-task_cab85a769d050ca4f43c29686bd3068e -> Main'."
+      },
+      {
+        "timestamp": "2026-10-24T13:52:32.086Z",
+        "level": "info",
+        "message": "Approval GRANTED by Operator@danvers.jarvis. Resuming task execution."
+      }
+    ],
+    "startedAt": "2026-10-24T13:52:31.878Z",
+    "workspace": {
+      "worktreePath": "D:\\Danvers\\workspaces\\task-task_cab85a769d050ca4f43c29686bd3068e",
+      "branchName": "jarvis/task-task_cab85a769d050ca4f43c29686bd3068e",
+      "baseCommit": "54e80699571a7cc6370c9bbb8b2b1a71954c123c",
+      "createdAt": "2026-10-24T13:52:31.981Z",
+      "clean": true
+    },
+    "approvalRequest": {
+      "taskId": "task_cab85a769d050ca4f43c29686bd3068e",
+      "action": "promote_code_to_main",
+      "target": "Branch jarvis/task-task_cab85a769d050ca4f43c29686bd3068e -> Main",
+      "description": "Coding task completed. Diff generated across 0 file(s). Review and approve promotion.",
+      "diffSnapshot": "",
+      "baseCommit": "54e80699571a7cc6370c9bbb8b2b1a71954c123c",
+      "id": "appr_74e9877eaa2c23068376204638b197ef",
+      "status": "approved",
+      "requestedAt": "2026-10-24T13:52:32.085Z",
+      "resolvedAt": "2026-10-24T13:52:32.086Z",
+      "resolvedBy": "Operator@danvers.jarvis"
+    }
+  },
+  {
+    "title": "Audit DB Migrations",
+    "type": "security_audit",
+    "permissionLevel": 1,
+    "scope": {
+      "workspaceRoot": "D:\\Danvers\\jarvis-os",
+      "allowedPaths": []
+    },
+    "maxAttempts": 3,
+    "id": "task_6bc62a690437fd60569964bdc2f87f81",
+    "status": "cancelled",
+    "createdAt": "2026-10-24T13:52:33.540Z",
+    "updatedAt": "2026-10-24T13:52:33.545Z",
+    "attempts": 1,
+    "logs": [
+      {
+        "timestamp": "2026-10-24T13:52:33.540Z",
+        "level": "info",
+        "message": "Task created and entered 'queued' state for project 'D:\\Danvers\\jarvis-os'."
+      },
+      {
+        "timestamp": "2026-10-24T13:52:33.544Z",
+        "level": "warn",
+        "message": "Action requires authorization: 'deploy_production' on 'prod-cluster-01'."
+      },
+      {
+        "timestamp": "2026-10-24T13:52:33.545Z",
+        "level": "warn",
+        "message": "Approval REJECTED by SecurityAdmin@danvers.jarvis: Missing vulnerability scan. Task cancelled."
+      }
+    ],
+    "startedAt": "2026-10-24T13:52:33.544Z",
+    "approvalRequest": {
+      "taskId": "task_6bc62a690437fd60569964bdc2f87f81",
+      "action": "deploy_production",
+      "target": "prod-cluster-01",
+      "description": "Deploying release v2.0 to production",
+      "id": "appr_3425b5c2aa2e6a6e4c6924b4cdc023cf",
+      "status": "rejected",
+      "requestedAt": "2026-10-24T13:52:33.544Z",
+      "resolvedAt": "2026-10-24T13:52:33.545Z",
+      "resolvedBy": "SecurityAdmin@danvers.jarvis",
+      "rejectionReason": "Missing vulnerability scan"
+    }
+  },
+  {
+    "title": "Deploy to Production App",
+    "type": "deployment",
+    "permissionLevel": 3,
+    "scope": {
+      "workspaceRoot": "D:/Danvers/workspaces/test-project",
+      "allowedPaths": []
+    },
+    "maxAttempts": 2,
+    "id": "task_4d0858850fbb804bba9138067deca433",
+    "status": "cancelled",
+    "createdAt": "2026-10-24T13:52:34.899Z",
+    "updatedAt": "2026-10-24T13:52:34.903Z",
+    "attempts": 1,
+    "logs": [
+      {
+        "timestamp": "2026-10-24T13:52:34.899Z",
+        "level": "info",
+        "message": "Task created and entered 'queued' state for project 'D:/Danvers/workspaces/test-project'."
+      },
+      {
+        "timestamp": "2026-10-24T13:52:34.902Z",
+        "level": "warn",
+        "message": "Action requires authorization: 'deploy_production' on 'production-vps-01'."
+      },
+      {
+        "timestamp": "2026-10-24T13:52:34.903Z",
+        "level": "warn",
+        "message": "Approval REJECTED by SecurityOfficer: Rollback plan missing. Task cancelled."
+      }
+    ],
+    "startedAt": "2026-10-24T13:52:34.902Z",
+    "approvalRequest": {
+      "taskId": "task_4d0858850fbb804bba9138067deca433",
+      "action": "deploy_production",
+      "target": "production-vps-01",
+      "description": "Deploying release v1.0.0 to live production environment",
+      "id": "appr_4797b37d3a545d41bbc7a33ea83b5974",
+      "status": "rejected",
+      "requestedAt": "2026-10-24T13:52:34.902Z",
+      "resolvedAt": "2026-10-24T13:52:34.903Z",
+      "resolvedBy": "SecurityOfficer",
+      "rejectionReason": "Rollback plan missing"
+    }
   }
 ]

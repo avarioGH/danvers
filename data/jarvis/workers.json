@@ -194,5 +194,65 @@
     ],
     "registeredAt": "2026-10-24T13:49:23.409Z",
     "lastHeartbeat": "2026-10-24T13:49:23.409Z"
+  },
+  {
+    "id": "wkr_37ea70d8b6eb03c5c48951448f46d20c",
+    "name": "Remote Ubuntu VPS Node 01",
+    "tokenHash": "c689b639984b04356642f387d129c0024ed83aa1729d46982929628169c1406c",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "D:/Danvers/workspaces/authorized-vps-project"
+    ],
+    "registeredAt": "2026-10-24T13:52:24.673Z",
+    "lastHeartbeat": "2026-10-24T13:52:24.675Z"
+  },
+  {
+    "id": "wkr_4938cafb698a19917d7051ec5e3ff080",
+    "name": "Hetzner Linux VPS 01",
+    "tokenHash": "bb404b682cfec640aad045c5923c2799167d35f075e80cbb095884ea80561495",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "D:/Danvers/workspaces/authorized-project"
+    ],
+    "registeredAt": "2026-10-24T13:52:27.626Z",
+    "lastHeartbeat": "2026-10-24T13:52:27.637Z"
+  },
+  {
+    "id": "wkr_eb96ea12e5359b55a0eac9a80215dc1b",
+    "name": "Secondary VPS 02",
+    "tokenHash": "0ef7c25c9450d5e05a2e9a236cc610a92b44c850627b271a4852c9c1c8dac2d2",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T13:52:27.634Z",
+    "lastHeartbeat": "2026-10-24T13:52:27.634Z"
+  },
+  {
+    "id": "wkr_ddba6197f605c00789fa78d0f5486ed3",
+    "name": "Read-Only Worker",
+    "tokenHash": "6963316b3808653027aa774a945173564eb32e31a5b2a5f4ca66eb84dc9484cd",
+    "status": "active",
+    "capabilities": [
+      "code_read"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T13:52:27.635Z",
+    "lastHeartbeat": "2026-10-24T13:52:27.635Z"
   }
 ]
