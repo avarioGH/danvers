@@ -1,0 +1,47 @@
+[
+  {
+    "id": "wkr_9f2ee37ae895a910e59c06d16c002cec",
+    "name": "Hetzner Linux VPS 01",
+    "tokenHash": "fc7ee9ba7778bfa62d3c2bff2dacad5e1d63dd0b0c820745e27c632fb2235690",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "D:/Danvers/workspaces/authorized-project"
+    ],
+    "registeredAt": "2026-10-24T13:14:18.066Z",
+    "lastHeartbeat": "2026-10-24T13:14:18.075Z"
+  },
+  {
+    "id": "wkr_d28400dd7b87ad630fc95de2cb43362d",
+    "name": "Secondary VPS 02",
+    "tokenHash": "793d56deb7ac7f963c7eb4de99e5cd72856cb4f5646ce134c1aa0e3bdd628806",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T13:14:18.072Z",
+    "lastHeartbeat": "2026-10-24T13:14:18.072Z"
+  },
+  {
+    "id": "wkr_c4d1ce8a49351806346dfe25a6a23ab9",
+    "name": "Read-Only Worker",
+    "tokenHash": "b78d0bbb6cec9ddfdc6d429e63bf43319540bf00edd974ce9cc1a2098535b6fc",
+    "status": "active",
+    "capabilities": [
+      "code_read"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T13:14:18.073Z",
+    "lastHeartbeat": "2026-10-24T13:14:18.073Z"
+  }
+]
