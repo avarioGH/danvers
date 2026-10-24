@@ -366,5 +366,37 @@
     ],
     "registeredAt": "2026-10-24T15:16:51.958Z",
     "lastHeartbeat": "2026-10-24T15:16:51.958Z"
+  },
+  {
+    "id": "wkr_8b0fe92590185c16ce43198520db2940",
+    "name": "qa-worker",
+    "tokenHash": "20d4345b8931730e2b0eac22d7e2f4640248c9174d6f5f945e762022b3f31b4b",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T15:37:46.436Z",
+    "lastHeartbeat": "2026-10-24T15:37:46.436Z"
+  },
+  {
+    "id": "wkr_3bfbe7cd7488d9cfe95ffea21beda3fc",
+    "name": "qa-worker",
+    "tokenHash": "48a97f72a6f8aa4b2ba1a68cb756a5462e407857f9990c744fcf482ecdae10f6",
+    "status": "active",
+    "capabilities": [
+      "code_read",
+      "code_edit",
+      "test_run"
+    ],
+    "allowedProjects": [
+      "*"
+    ],
+    "registeredAt": "2026-10-24T15:38:15.872Z",
+    "lastHeartbeat": "2026-10-24T15:38:15.872Z"
   }
 ]
