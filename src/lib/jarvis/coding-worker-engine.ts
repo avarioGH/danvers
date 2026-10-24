@@ -102,6 +102,22 @@ Analyze this error and suggest a fix.`;
         }
 
         testsPassed = testRun.passed;
+        if (!testsPassed) {
+          // If tests did not pass after repair attempts, mark task as failed and do NOT attach approval request
+          await TaskStore.updateTaskStatus(task.id, 'failed', `Test verification failed after ${repairAttempts} repair attempts.`);
+          return {
+            success: false,
+            worktreePath: workspace.worktreePath,
+            branchName: workspace.branchName,
+            baseCommit: workspace.baseCommit,
+            diff: WorkspaceManager.getWorktreeDiff(workspace.worktreePath, workspace.baseCommit),
+            changedFiles: WorkspaceManager.getChangedFiles(workspace.worktreePath, workspace.baseCommit),
+            testResults,
+            repairAttempts,
+            approvalRequired: false,
+            error: 'Test verification failed.'
+          };
+        }
       }
 
       // 5. Generate Diff against base commit
