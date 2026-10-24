@@ -11,7 +11,18 @@ export async function GET(req: NextRequest) {
   }
 
   // Pre-registered safe workspaces
+  const isWindows = process.platform === 'win32';
+  const defaultDisposablePath = isWindows
+    ? path.resolve('D:/Danvers/workspaces/disposable-e2e-project')
+    : path.resolve('/root/workspaces/disposable-e2e-project');
+
   const registeredRoots = [
+    {
+      id: 'disposable-e2e-project',
+      name: 'Disposable E2E Test Project',
+      rootPath: defaultDisposablePath,
+      description: 'Isolated test sandbox for automated agent coding and verification'
+    },
     {
       id: 'jarvis-os-core',
       name: 'Danvers OS & Jarvis Core',

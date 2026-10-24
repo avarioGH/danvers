@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
 import { TaskStore } from '@/lib/jarvis/task-store';
+import { WorkspaceManager } from '@/lib/jarvis/workspace-manager';
 import { getAuthenticatedUser } from '@/lib/jarvis/auth-helper';
 
 export async function GET(
@@ -45,7 +49,39 @@ export async function PATCH(
 
       // Explicitly pass server-authenticated user email as resolvedBy to prevent spoofing
       const updated = await TaskStore.resolveApproval(id, approved, user.email, reason);
-      return NextResponse.json({ task: updated });
+
+      // If approved and the task has an isolated workspace attached, execute safe promotion
+      if (approved && updated.workspace?.worktreePath) {
+        const repoPath = path.resolve(updated.scope.workspaceRoot);
+        const worktreePath = updated.workspace.worktreePath;
+        const branchName = updated.workspace.branchName;
+
+        try {
+          if (fs.existsSync(worktreePath)) {
+            // Commit staged/modified changes in worktree
+            execSync('git add .', { cwd: worktreePath, stdio: 'pipe' });
+            execSync('git commit -m "feat(agent): promote verified changes"', { cwd: worktreePath, stdio: 'pipe' });
+
+            // Merge into target branch (main)
+            execSync(`git merge ${branchName}`, { cwd: repoPath, stdio: 'pipe' });
+            const promotedCommit = execSync('git rev-parse HEAD', { cwd: repoPath }).toString().trim();
+
+            // Run verification test on target main branch
+            execSync('node --test', { cwd: repoPath, stdio: 'pipe' });
+
+            // Cleanup isolated worktree
+            WorkspaceManager.removeWorktree(repoPath, updated.workspace);
+
+            await TaskStore.updateTaskStatus(id, 'succeeded', `Changes verified and promoted to main at commit ${promotedCommit}.`);
+          }
+        } catch (promoteErr) {
+          console.error('[Promotion Error]', promoteErr);
+          await TaskStore.updateTaskStatus(id, 'failed', `Promotion failed: ${(promoteErr as Error).message}`);
+        }
+      }
+
+      const finalTask = await TaskStore.getTask(id);
+      return NextResponse.json({ task: finalTask });
     }
 
     if (body.status) {
