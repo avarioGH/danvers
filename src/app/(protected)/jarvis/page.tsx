@@ -26,8 +26,15 @@ import { Task, Project, WorkerTelemetry, ProviderStatus, FileTreeItem } from '@/
 export default function JarvisAgentWorkspace() {
   // Navigation & Panel States
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(false); // Initially false; opened dynamically on desktop mount
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Auto-open inspector by default on desktop viewports (>= 768px), keep closed on mobile
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setInspectorOpen(true);
+    }
+  }, []);
   const [activeNav, setActiveNav] = useState<'workspace' | 'files' | 'tasks' | 'approvals' | 'workers' | 'projects' | 'ops'>('workspace');
   const [opsData, setOpsData] = useState<any>(null);
   const [loadingOps, setLoadingOps] = useState(false);
@@ -172,13 +179,22 @@ export default function JarvisAgentWorkspace() {
 
   // Identify Windows Local Worker and compute status
   const windowsWorker = useMemo(() => {
-    // Return the latest active windows worker by registeredAt or lastHeartbeat
-    const matching = workers.filter(w => w.name.toLowerCase().includes('windows'));
-    if (matching.length === 0) return null;
-    return matching.reduce((latest, current) => {
-      const latestTime = new Date(latest.lastHeartbeat || latest.registeredAt).getTime();
-      const currentTime = new Date(current.lastHeartbeat || current.registeredAt).getTime();
-      return currentTime > latestTime ? current : latest;
+    // 1. Filter only active, non-revoked workers matching windows
+    const eligible = workers.filter(
+      w => w.status === 'active' && w.name.toLowerCase().includes('windows')
+    );
+    if (eligible.length === 0) return null;
+
+    // 2. Select the worker with the most recent valid heartbeat
+    return eligible.reduce((latest, current) => {
+      const latestTime = latest.lastHeartbeat ? new Date(latest.lastHeartbeat).getTime() : 0;
+      const currentTime = current.lastHeartbeat ? new Date(current.lastHeartbeat).getTime() : 0;
+      if (currentTime > latestTime) return current;
+      if (latestTime > currentTime) return latest;
+      // Fallback to registration time if heartbeats are identical
+      const regLatest = new Date(latest.registeredAt).getTime();
+      const regCurrent = new Date(current.registeredAt).getTime();
+      return regCurrent > regLatest ? current : latest;
     });
   }, [workers]);
 
@@ -558,9 +574,9 @@ export default function JarvisAgentWorkspace() {
         </header>
 
         {/* Central Dynamic Content Switcher */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">
           {activeNav === 'workspace' && (
-            <div className="w-full max-w-6xl mx-auto space-y-6">
+            <div className="w-full space-y-6">
               {/* Directive Submission Form */}
               <DirectiveComposer
                 directiveTitle={directiveTitle}
@@ -700,7 +716,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 2: FILE EXPLORER */}
           {activeNav === 'files' && (
-            <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-4 flex flex-col h-[650px]">
                 <div className="flex items-center justify-between pb-3 border-b border-neutral-800 mb-2">
                   <span className="text-xs font-mono font-semibold text-neutral-300 flex items-center gap-1.5">
@@ -757,7 +773,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 3: DIRECTIVES & QUEUE */}
           {activeNav === 'tasks' && (
-            <div className="w-full max-w-6xl mx-auto space-y-4">
+            <div className="w-full space-y-4">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div className="flex items-center gap-2">
                   <ListTodo className="w-4 h-4 text-cyan-400" />
@@ -850,7 +866,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 4: OPERATOR APPROVALS */}
           {activeNav === 'approvals' && (
-            <div className="w-full max-w-6xl mx-auto space-y-4">
+            <div className="w-full space-y-4">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-5">
                 <div className="flex items-center gap-2 text-amber-400 mb-1">
                   <ShieldAlert className="w-5 h-5" />
@@ -905,7 +921,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 5: WORKERS TELEMETRY */}
           {activeNav === 'workers' && (
-            <div className="w-full max-w-6xl mx-auto space-y-4">
+            <div className="w-full space-y-4">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-4 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <Server className="w-4 h-4 text-cyan-400" />
@@ -968,7 +984,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 6: PROJECTS & SANDBOXES */}
           {activeNav === 'projects' && (
-            <div className="w-full max-w-6xl mx-auto space-y-4">
+            <div className="w-full space-y-4">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-4 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <FolderGit2 className="w-4 h-4 text-cyan-400" />
@@ -1013,7 +1029,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 7: JARVIS OPERATIONS & SECURITY AGENT */}
           {activeNav === 'ops' && (
-            <div className="w-full max-w-6xl mx-auto space-y-6">
+            <div className="w-full space-y-6">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                   <h2 className="text-sm font-semibold text-white flex items-center gap-2">
@@ -1131,7 +1147,7 @@ export default function JarvisAgentWorkspace() {
             className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
             onClick={() => setInspectorOpen(false)}
           />
-          <aside className="fixed inset-y-0 right-0 w-80 max-w-[85vw] md:static md:w-80 md:min-w-[20rem] border-l border-neutral-800/80 bg-[#0a0e19] flex flex-col justify-between overflow-y-auto z-50 md:z-20 backdrop-blur-md shadow-2xl md:shadow-none">
+          <aside className="fixed inset-y-0 right-0 w-80 max-w-[85vw] lg:w-96 lg:min-w-[24rem] md:static border-l border-neutral-800/80 bg-[#0a0e19] flex flex-col justify-between overflow-y-auto z-50 md:z-20 backdrop-blur-md shadow-2xl md:shadow-none">
             <ProjectContextInspector
               activeProject={activeProject}
               selectedTask={selectedTask}
