@@ -122,7 +122,9 @@ export default function JarvisAgentWorkspace() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeNav, setActiveNav] = useState<'workspace' | 'files' | 'tasks' | 'approvals' | 'workers' | 'projects'>('workspace');
+  const [activeNav, setActiveNav] = useState<'workspace' | 'files' | 'tasks' | 'approvals' | 'workers' | 'projects' | 'ops'>('workspace');
+  const [opsData, setOpsData] = useState<any>(null);
+  const [loadingOps, setLoadingOps] = useState(false);
 
   // Backend Data States
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -551,7 +553,8 @@ export default function JarvisAgentWorkspace() {
                     badge: pendingApprovals.length > 0
                   },
                   { id: 'workers', label: `Workers (${workers.length})`, icon: Server },
-                  { id: 'projects', label: 'Sandbox Repos', icon: FolderGit2 }
+                  { id: 'projects', label: 'Sandbox Repos', icon: FolderGit2 },
+                  { id: 'ops', label: 'Ops & Security Audit', icon: ShieldCheck }
                 ].map(item => {
                   const Icon = item.icon;
                   const isActive = activeNav === item.id;
@@ -687,7 +690,8 @@ export default function JarvisAgentWorkspace() {
                 badge: pendingApprovals.length > 0
               },
               { id: 'workers', label: `Workers (${workers.length})`, icon: Server },
-              { id: 'projects', label: 'Sandbox Repos', icon: FolderGit2 }
+              { id: 'projects', label: 'Sandbox Repos', icon: FolderGit2 },
+              { id: 'ops', label: 'Ops & Security Audit', icon: ShieldCheck }
             ].map(item => {
               const Icon = item.icon;
               const isActive = activeNav === item.id;
@@ -1383,6 +1387,112 @@ export default function JarvisAgentWorkspace() {
                     <p className="text-xs text-neutral-500">{p.description}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: JARVIS OPERATIONS & SECURITY AGENT */}
+          {activeNav === 'ops' && (
+            <div className="max-w-5xl mx-auto space-y-6">
+              <div className="bg-[#0c1018] border border-neutral-800 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                    JARVIS Operations & Security Audit
+                  </h2>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Automated, non-destructive infrastructure telemetry and security assessment across authorized assets.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    setLoadingOps(true);
+                    try {
+                      const res = await fetch('/api/jarvis/ops');
+                      const data = await res.json();
+                      setOpsData(data);
+                    } catch (e) {
+                      console.error(e);
+                    } finally {
+                      setLoadingOps(false);
+                    }
+                  }}
+                  disabled={loadingOps}
+                  className="px-3.5 py-1.5 bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 rounded text-xs font-mono hover:bg-cyan-900/60 transition flex items-center gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingOps ? 'animate-spin' : ''}`} />
+                  Run Diagnostics
+                </button>
+              </div>
+
+              {/* Host & Resource Telemetry Card */}
+              {opsData?.host && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
+                  <div className="bg-[#0c1018] border border-neutral-800 rounded-xl p-4 space-y-2">
+                    <span className="text-[10px] text-neutral-500 uppercase">Host Infrastructure</span>
+                    <div className="text-neutral-200 font-bold">{opsData.host.hostname} ({opsData.host.platform})</div>
+                    <div className="text-neutral-400 text-[11px]">Uptime: {(opsData.host.uptimeSeconds / 3600).toFixed(1)} hrs</div>
+                  </div>
+                  <div className="bg-[#0c1018] border border-neutral-800 rounded-xl p-4 space-y-2">
+                    <span className="text-[10px] text-neutral-500 uppercase">Memory Utilization</span>
+                    <div className="text-cyan-400 font-bold">{opsData.host.memory.usedPercentage}% Used</div>
+                    <div className="text-neutral-400 text-[11px]">{(opsData.host.memory.usedBytes / 1024 / 1024 / 1024).toFixed(2)} GB / {(opsData.host.memory.totalBytes / 1024 / 1024 / 1024).toFixed(2)} GB</div>
+                  </div>
+                  <div className="bg-[#0c1018] border border-neutral-800 rounded-xl p-4 space-y-2">
+                    <span className="text-[10px] text-neutral-500 uppercase">Active Workers</span>
+                    <div className="text-emerald-400 font-bold">{opsData.workers.activeCount} Online</div>
+                    <div className="text-neutral-400 text-[11px]">{opsData.workers.totalRegistered} registered nodes</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Findings & Evidence */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                  Security & Health Findings ({opsData?.findings?.length || 0})
+                </h3>
+
+                {(!opsData || !opsData.findings || opsData.findings.length === 0) ? (
+                  <div className="bg-[#0c1018] border border-neutral-800 rounded-xl p-8 text-center text-neutral-500 font-mono text-xs">
+                    Click &apos;Run Diagnostics&apos; above to initiate live asset telemetry check.
+                  </div>
+                ) : (
+                  opsData.findings.map((f: any) => (
+                    <div key={f.id} className="bg-[#0c1018] border border-neutral-800 rounded-xl p-5 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold ${
+                            f.severity === 'critical' ? 'bg-red-950 text-red-400 border border-red-800' :
+                            f.severity === 'high' ? 'bg-amber-950 text-amber-400 border border-amber-800' :
+                            f.severity === 'medium' ? 'bg-yellow-950 text-yellow-400 border border-yellow-800' :
+                            'bg-cyan-950 text-cyan-400 border border-cyan-800'
+                          }`}>
+                            {f.severity}
+                          </span>
+                          <span className="text-xs font-bold text-white">{f.title}</span>
+                        </div>
+                        <span className="text-[11px] font-mono text-neutral-500">{f.asset}</span>
+                      </div>
+
+                      <div className="p-3 bg-[#080b12] rounded border border-neutral-800 font-mono text-xs text-neutral-300">
+                        <span className="text-neutral-500 block mb-1">EVIDENCE:</span>
+                        {f.evidence}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-0.5">Impact:</span>
+                          <p className="text-neutral-300">{f.impact}</p>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-0.5">Recommendation:</span>
+                          <p className="text-neutral-300">{f.recommendation}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
