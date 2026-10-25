@@ -32,6 +32,7 @@ export interface ApprovalRequest {
   description: string;
   details?: Record<string, unknown>;
   diffSnapshot?: string;
+  diffHash?: string;
   baseCommit?: string;
   requestedAt: string;
   status: 'pending' | 'approved' | 'rejected';

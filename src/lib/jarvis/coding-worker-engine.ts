@@ -1,4 +1,5 @@
 import path from 'path';
+import crypto from 'crypto';
 import { WorkspaceManager } from './workspace-manager';
 import { SafePatcher, FileEditOperation } from './safe-patcher';
 import { SafeProcessRunner, ProcessExecutionResult } from './safe-process-runner';
@@ -123,6 +124,7 @@ Analyze this error and suggest a fix.`;
       // 5. Generate Diff against base commit
       const diff = WorkspaceManager.getWorktreeDiff(workspace.worktreePath, workspace.baseCommit);
       const changedFiles = WorkspaceManager.getChangedFiles(workspace.worktreePath, workspace.baseCommit);
+      const diffHash = crypto.createHash('sha256').update(diff).digest('hex');
 
       // 6. Require Explicit Human Approval for promoting changes to main
       await TaskStore.attachApprovalRequest(task.id, {
@@ -131,6 +133,7 @@ Analyze this error and suggest a fix.`;
         target: `Branch ${workspace.branchName} -> Main`,
         description: `Coding task completed. Diff generated across ${changedFiles.length} file(s). Review and approve promotion.`,
         diffSnapshot: diff,
+        diffHash,
         baseCommit: workspace.baseCommit
       });
 

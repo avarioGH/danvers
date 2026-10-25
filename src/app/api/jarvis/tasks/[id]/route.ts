@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { execSync } from 'child_process';
 import { TaskStore } from '@/lib/jarvis/task-store';
 import { WorkspaceManager } from '@/lib/jarvis/workspace-manager';
@@ -50,11 +51,22 @@ export async function PATCH(
       // Explicitly pass server-authenticated user email as resolvedBy to prevent spoofing
       const updated = await TaskStore.resolveApproval(id, approved, user.email, reason);
 
-      // If approved and the task has an isolated workspace attached, execute safe promotion
+      // Cryptographic anti-tamper verification: Ensure worktree diff matches approved diffHash
       if (approved && updated.workspace?.worktreePath) {
         const repoPath = path.resolve(updated.scope.workspaceRoot);
         const worktreePath = updated.workspace.worktreePath;
         const branchName = updated.workspace.branchName;
+
+        if (fs.existsSync(worktreePath) && updated.approvalRequest?.diffHash) {
+          const currentDiff = WorkspaceManager.getWorktreeDiff(worktreePath, updated.workspace.baseCommit);
+          const currentHash = crypto.createHash('sha256').update(currentDiff).digest('hex');
+          if (currentHash !== updated.approvalRequest.diffHash) {
+            await TaskStore.updateTaskStatus(id, 'failed', 'Anti-tamper security violation: Worktree diff has changed since operator approval was requested.');
+            return NextResponse.json({
+              error: 'Security violation: Artifact tampered. Current diff does not match signed approval hash.'
+            }, { status: 409 });
+          }
+        }
 
         try {
           if (fs.existsSync(worktreePath)) {
