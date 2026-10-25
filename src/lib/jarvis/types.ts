@@ -90,3 +90,48 @@ export interface PermissionCheckResult {
   reason?: string;
   level: PermissionLevel;
 }
+
+export type Task = JarvisTask;
+
+export interface Project {
+  id: string;
+  name: string;
+  rootPath: string;
+  description?: string;
+  custom?: boolean;
+  git?: { branch: string; clean: boolean; error?: string };
+}
+
+export interface WorkerTelemetry {
+  id: string;
+  name: string;
+  status: 'active' | 'revoked' | 'stale';
+  capabilities: string[];
+  allowedProjects: string[];
+  registeredAt: string;
+  lastHeartbeat: string;
+  currentTaskId?: string | null;
+}
+
+export interface ProviderStatus {
+  local_ollama?: {
+    endpoint: string;
+    status: string;
+    reachable: boolean;
+    models?: Array<{ name: string; sizeBytes: number; parameterSize?: string }>;
+    error?: string;
+  };
+  cloud_gemini?: { configured: boolean; status: string; reachable: boolean };
+  cloud_openai?: { configured: boolean; status: string; reachable: boolean };
+}
+
+export interface FileTreeItem {
+  name: string;
+  relativePath: string;
+  isDirectory: boolean;
+  sizeBytes?: number;
+  modifiedAt?: string;
+  extension?: string;
+  children?: FileTreeItem[];
+}
+
