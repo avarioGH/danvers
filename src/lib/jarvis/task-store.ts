@@ -10,8 +10,43 @@ export class TaskStore {
   private static tasks: Map<string, JarvisTask> = new Map();
   private static initialized = false;
 
+  private static reconcileStaleTasks() {
+    try {
+      const now = Date.now();
+      const STALE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes timeout threshold
+      let mutated = false;
+
+      for (const task of this.tasks.values()) {
+        if (task.status === 'running' || task.status === 'assigned') {
+          const lastActiveTime = new Date(task.updatedAt || task.startedAt || task.createdAt).getTime();
+          if (now - lastActiveTime > STALE_TIMEOUT_MS) {
+            task.status = 'failed';
+            task.updatedAt = new Date().toISOString();
+            task.completedAt = task.updatedAt;
+            task.logs = task.logs || [];
+            task.logs.push({
+              timestamp: task.updatedAt,
+              level: 'error',
+              message: 'Task automatically terminated: Execution exceeded 10 minutes timeout without worker activity.'
+            });
+            mutated = true;
+          }
+        }
+      }
+
+      if (mutated) {
+        this.persist();
+      }
+    } catch (err) {
+      console.error('[TaskStore] Error reconciling stale tasks:', err);
+    }
+  }
+
   private static ensureInitialized() {
-    if (this.initialized) return;
+    if (this.initialized) {
+      this.reconcileStaleTasks();
+      return;
+    }
     try {
       if (!fs.existsSync(this.DB_DIR)) {
         fs.mkdirSync(this.DB_DIR, { recursive: true });
@@ -24,6 +59,7 @@ export class TaskStore {
           this.tasks.set(t.id, t);
         }
       }
+      this.reconcileStaleTasks();
     } catch (err) {
       console.error('[TaskStore] Error loading durable store:', err);
     }

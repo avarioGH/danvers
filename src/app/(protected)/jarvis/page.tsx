@@ -457,126 +457,126 @@ export default function JarvisAgentWorkspace() {
       {/* =========================================================================
           COLUMN A: LEFT SIDEBAR (DESKTOP)
           ========================================================================= */}
-      <aside
-        className={`hidden md:flex ${
-          sidebarOpen ? 'w-64 min-w-[16rem]' : 'w-16 min-w-[4rem]'
-        } flex-col justify-between border-r border-neutral-800/80 bg-[#090d18]/95 transition-all duration-300 ease-in-out z-20 backdrop-blur-md`}
-      >
-        <SidebarNavigation
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          activeNav={activeNav}
-          setActiveNav={setActiveNav}
-          tasksCount={tasks.length}
-          pendingApprovalsCount={pendingApprovals.length}
-          workersCount={workers.length}
-          projects={projects}
-          selectedProjectId={selectedProjectId}
-          setSelectedProjectId={setSelectedProjectId}
-          activeProject={activeProject}
-          onOpenAddProjectModal={() => setShowAddProjectModal(true)}
-        />
-
-        {/* Bottom System Telemetry Indicator with Freshness State */}
-        <div className="p-3 border-t border-neutral-800/80 bg-[#060912]">
-          {sidebarOpen ? (
-            <div className="space-y-2 text-[11px] font-mono">
-              <div className="flex items-center justify-between">
-                <span className="text-neutral-400 flex items-center gap-1.5">
-                  <Laptop className="w-3.5 h-3.5 text-cyan-400" /> Windows Local:
-                </span>
-                <span
-                  className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${
-                    windowsWorkerState.state === 'online'
-                      ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50'
-                      : windowsWorkerState.state === 'stale'
-                      ? 'bg-amber-950/80 text-amber-400 border border-amber-800/50'
-                      : 'bg-neutral-800 text-neutral-400 border border-neutral-700/50'
-                  }`}
-                  title={windowsWorker?.lastHeartbeat ? `Heartbeat: ${new Date(windowsWorker.lastHeartbeat).toLocaleTimeString()}` : 'No heartbeat yet'}
-                >
-                  {windowsWorkerState.label}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-neutral-400 flex items-center gap-1.5">
-                  <Server className="w-3.5 h-3.5 text-blue-400" /> Contabo VPS:
-                </span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/50">
-                  ONLINE ({onlineWorkersCount} active)
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-center" title="Worker Telemetry Online">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            </div>
-          )}
-        </div>
-      </aside>
+      <SidebarNavigation
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        activeNav={activeNav}
+        setActiveNav={setActiveNav}
+        tasksCount={tasks.length}
+        pendingApprovalsCount={pendingApprovals.length}
+        workersCount={workers.length}
+        projects={projects}
+        selectedProjectId={selectedProjectId}
+        setSelectedProjectId={setSelectedProjectId}
+        activeProject={activeProject}
+        onOpenAddProjectModal={() => setShowAddProjectModal(true)}
+        windowsWorkerStatus={windowsWorkerState.state}
+        windowsWorkerId={windowsWorker?.id}
+        vpsWorkerCount={onlineWorkersCount || 1}
+      />
 
       {/* =========================================================================
           COLUMN B: MAIN WORKSPACE (DIRECTIVE COMPOSER, TASK PIPELINE, LOGS)
           ========================================================================= */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#07090e] pt-12 md:pt-0">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#070C16] pt-12 md:pt-0">
         {/* Top Breadcrumb & Status Bar */}
-        <header className="hidden md:flex h-12 border-b border-neutral-800/80 bg-[#090d18]/80 px-4 items-center justify-between shrink-0 backdrop-blur-md">
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <span className="text-xs font-medium text-neutral-400 flex items-center gap-1.5 truncate">
+        <header className="hidden md:flex h-12 border-b border-[#152338]/80 bg-[#070C16] px-6 items-center justify-between shrink-0">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-[#627D98] hover:text-[#9FB3C8] transition cursor-pointer flex items-center gap-1.5">
               <span>Workspace</span>
-              <span className="text-neutral-600">/</span>
-              <span className="text-neutral-200 font-semibold">{activeProject?.name || 'Workspace Root'}</span>
             </span>
-            {selectedFilePath && (
-              <>
-                <span className="text-neutral-600">/</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/50 text-cyan-300 border border-cyan-800/50 truncate">
-                  {selectedFilePath}
-                </span>
-              </>
-            )}
+            <span className="text-[#334E68]">/</span>
+            <span className="text-white font-medium truncate max-w-[280px]">
+              {activeProject?.name || 'Disposable E2E Test Project'}
+            </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Quick Status Badges in Topbar */}
-            <div className="hidden lg:flex items-center gap-2">
-              <WorkerStatusBadge
-                name="Windows Local"
-                lastHeartbeat={windowsWorker?.lastHeartbeat}
-                status={windowsWorker?.status}
-                isWindows={true}
-                compact={true}
+          {/* Search bar & utility icons */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center">
+              <Search className="w-3.5 h-3.5 text-[#627D98] absolute left-3 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search files, tasks, or ask anything..."
+                className="w-72 bg-[#0B1526] hover:bg-[#0E1D33] focus:bg-[#0E1D33] border border-[#162A45] focus:border-[#228BE6] rounded-xl pl-9 pr-14 py-1.5 text-xs text-white placeholder-[#627D98] focus:outline-none transition font-sans"
               />
-              <span className="text-neutral-700">|</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-950/40 text-blue-300 border border-blue-800/40">
-                VPS • Online
+              <span className="text-[10px] font-mono text-[#486581] border border-[#162A45] px-1.5 py-0.2 rounded absolute right-2.5 pointer-events-none">
+                Ctrl K
               </span>
             </div>
 
             <button
-              onClick={fetchTelemetry}
-              disabled={isRefreshing}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-lg bg-neutral-900 border border-neutral-800 hover:bg-neutral-800/80 transition text-neutral-300 disabled:opacity-50"
-              title="Refresh Telemetry"
+              type="button"
+              className="p-1.5 text-[#627D98] hover:text-white transition rounded-lg hover:bg-[#0F1E33]"
+              title="Toggle theme"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
-              <span className="hidden sm:inline">Sync</span>
+              <span className="text-xs">🌙</span>
             </button>
 
             <button
-              onClick={() => setInspectorOpen(!inspectorOpen)}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition"
-              title={inspectorOpen ? 'Hide Right Inspector' : 'Open Right Inspector'}
+              type="button"
+              className="p-1.5 text-[#627D98] hover:text-white transition rounded-lg hover:bg-[#0F1E33] relative"
+              title="Notifications"
             >
-              {inspectorOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRight className="w-4 h-4" />}
+              <span className="text-xs">🔔</span>
             </button>
+
+            {/* User Avatar Circle */}
+            <div className="w-6 h-6 rounded-full bg-[#1E3A63] text-[#38BDF8] border border-[#2E5B9A] flex items-center justify-center font-bold text-[10px] select-none">
+              D
+            </div>
           </div>
         </header>
 
         {/* Central Dynamic Content Switcher */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-5">
           {activeNav === 'workspace' && (
-            <div className="w-full space-y-6">
+            <div className="w-full space-y-5">
+              {/* Heading Row Matching Reference */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-[#0F223D] border border-[#1E4976] flex items-center justify-center text-[#38BDF8] shrink-0">
+                      <FolderGit2 className="w-4 h-4" />
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <h1 className="text-xl font-bold text-white tracking-tight font-sans">
+                        Agent Workspace
+                      </h1>
+                      <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#0B172A] border border-[#1E385C] text-[#38BDF8] font-mono text-xs cursor-pointer hover:border-[#38BDF8]/60 transition">
+                        <GitBranch className="w-3 h-3 text-[#38BDF8]" />
+                        <span>{activeProject?.git?.branch || 'main'}</span>
+                        <ChevronDown className="w-3 h-3 text-[#627D98]" />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-[#829AB1] font-sans">
+                    Describe what you want to build, fix, or analyze. JARVIS will plan, execute, test, and show the results for your approval.
+                  </p>
+                </div>
+
+                {/* Connection Badges Top Right */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0A1628] border border-[#162E4E] text-xs font-mono text-[#CBD5E1]">
+                    <Laptop className="w-3.5 h-3.5 text-[#38BDF8]" />
+                    <span className="text-white font-medium">Windows Worker</span>
+                    <span className="flex items-center gap-1 text-[11px] text-[#34D399]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                      <span>{windowsWorkerState.state === 'online' ? 'Connected' : 'Offline'}</span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0A1628] border border-[#162E4E] text-xs font-mono text-[#CBD5E1]">
+                    <Server className="w-3.5 h-3.5 text-[#627D98]" />
+                    <span className="text-white font-medium">VPS</span>
+                    <span className="flex items-center gap-1 text-[11px] text-[#34D399]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                      <span>Online</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
               {/* Directive Submission Form */}
               <DirectiveComposer
                 directiveTitle={directiveTitle}
@@ -618,99 +618,154 @@ export default function JarvisAgentWorkspace() {
               )}
 
               {/* Directive Conversation / Inspection Stream */}
-              {selectedTask ? (
-                <div className="space-y-4">
-                  {/* Task Header & Execution Lifecycle Timeline */}
-                  <div className="bg-[#0b101c] border border-neutral-800/90 rounded-xl p-4 shadow-xl space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-neutral-800/80">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider ${
-                              selectedTask.status === 'succeeded'
-                                ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/60'
-                                : selectedTask.status === 'awaiting_approval'
-                                ? 'bg-amber-950/80 text-amber-400 border border-amber-800/60 animate-pulse'
-                                : selectedTask.status === 'running'
-                                ? 'bg-cyan-950/80 text-cyan-400 border border-cyan-800/60'
-                                : selectedTask.status === 'failed'
-                                ? 'bg-red-950/80 text-red-400 border border-red-800/60'
-                                : 'bg-neutral-800 text-neutral-300'
-                            }`}
-                          >
-                            {selectedTask.status}
-                          </span>
-                          <span className="text-xs font-mono text-neutral-500">{selectedTask.id}</span>
-                          <span className="text-xs text-neutral-600">•</span>
-                          <span className="text-xs text-neutral-400 font-mono">
-                            {new Date(selectedTask.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                        <h3 className="text-sm font-semibold text-neutral-100">{selectedTask.title}</h3>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {(selectedTask.status === 'queued' || selectedTask.status === 'assigned') && (
-                          <button
-                            onClick={() => handleTriggerAnalysis(selectedTask.id)}
-                            disabled={analyzingTaskId === selectedTask.id}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-cyan-600/20 text-cyan-300 border border-cyan-600/40 hover:bg-cyan-600/30 transition disabled:opacity-50"
-                          >
-                            <Play className="w-3.5 h-3.5 fill-current" />
-                            <span>
-                              {analyzingTaskId === selectedTask.id ? 'Running Execution...' : 'Run Agent Execution'}
-                            </span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Visual Lifecycle Progress Bar */}
-                    <TaskLifecycle task={selectedTask} />
+              <div className="space-y-3">
+                {/* Reference Sub-Tabs Row */}
+                <div className="flex items-center justify-between border-b border-[#152338] pb-1">
+                  <div className="flex items-center gap-6 text-xs font-medium">
+                    <button
+                      type="button"
+                      className="text-[#38BDF8] border-b-2 border-[#38BDF8] pb-2 font-semibold flex items-center gap-1.5"
+                    >
+                      <span>Tasks</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveNav('ops')}
+                      className="text-[#829AB1] hover:text-white transition pb-2"
+                    >
+                      Execution Logs
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveNav('approvals')}
+                      className="text-[#829AB1] hover:text-white transition pb-2"
+                    >
+                      Diff & Changes
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[#829AB1] hover:text-white transition pb-2"
+                    >
+                      Tests
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[#829AB1] hover:text-white transition pb-2"
+                    >
+                      Security Scan
+                    </button>
                   </div>
 
-                  {/* Pending Operator Approval Box if Blocked */}
-                  {selectedTask.status === 'awaiting_approval' && selectedTask.approvalRequest && (
-                    <div className="bg-amber-950/20 border border-amber-800/60 rounded-xl p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold">
-                          <ShieldAlert className="w-4 h-4" />
-                          <span>Action Blocked: Level 3 Operator Signoff Required</span>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="bg-[#0B1526] border border-[#162942] rounded-lg px-2.5 py-1 text-xs text-[#CBD5E1] appearance-none cursor-pointer focus:outline-none"
+                    >
+                      <option>All tasks</option>
+                    </select>
+                  </div>
+                </div>
+
+                {selectedTask ? (
+                  <div className="rounded-2xl border border-[#162942] bg-[#0A1220] p-4 shadow-xl space-y-4">
+                    {/* Task Card Header */}
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#0F223D] border border-[#1E4976] flex items-center justify-center text-[#38BDF8] shrink-0">
+                          <FolderGit2 className="w-4 h-4" />
                         </div>
-                        <span className="text-[10px] font-mono text-neutral-500">
-                          {selectedTask.approvalRequest.id}
-                        </span>
+                        <div className="space-y-0.5">
+                          <h3 className="text-sm font-semibold text-white tracking-tight">
+                            {selectedTask.title}
+                          </h3>
+                          <p className="text-xs text-[#627D98]">
+                            {selectedTask.description || 'Add strict email validation rules and proper error messages'}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-amber-200/90 font-mono">
-                        {selectedTask.approvalRequest.description}
-                      </p>
-                      <div className="flex justify-end gap-2 pt-1">
-                        <button
-                          onClick={() => handleResolveApproval(selectedTask.id, false)}
-                          disabled={resolvingApprovalId === selectedTask.id}
-                          className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg bg-red-950/60 text-red-300 border border-red-800 hover:bg-red-900/60 transition"
+
+                      <div className="flex items-center gap-3">
+                        {/* Status Badge */}
+                        <span
+                          className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium ${
+                            selectedTask.status === 'succeeded'
+                              ? 'bg-[#064E3B]/60 text-[#34D399] border border-[#059669]/60'
+                              : selectedTask.status === 'awaiting_approval'
+                              ? 'bg-[#78350F]/60 text-[#FBBF24] border border-[#D97706]/60 animate-pulse'
+                              : selectedTask.status === 'running'
+                              ? 'bg-[#0C2D48]/80 text-[#38BDF8] border border-[#0284C7]/60'
+                              : selectedTask.status === 'failed'
+                              ? 'bg-[#450A0A]/80 text-[#F87171] border border-[#DC2626]/60'
+                              : 'bg-[#172554]/60 text-[#60A5FA] border border-[#1D4ED8]/60'
+                          }`}
                         >
-                          <X className="w-3.5 h-3.5" /> Reject Directive
-                        </button>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                          <span className="capitalize">{selectedTask.status.replace('_', ' ')}</span>
+                        </span>
+
+                        <span className="text-xs font-mono text-[#627D98]">
+                          {new Date(selectedTask.createdAt).toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' })},{' '}
+                          {new Date(selectedTask.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </span>
+
+                        {/* Action menu dots */}
                         <button
-                          onClick={() => handleResolveApproval(selectedTask.id, true)}
-                          disabled={resolvingApprovalId === selectedTask.id}
-                          className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg bg-emerald-950/60 text-emerald-300 border border-emerald-800 hover:bg-emerald-900/60 transition"
+                          type="button"
+                          className="p-1 rounded text-[#627D98] hover:text-white transition"
+                          title="More options"
                         >
-                          <Check className="w-3.5 h-3.5" /> Authorize Execution
+                          ⋮
                         </button>
                       </div>
                     </div>
-                  )}
 
-                  {/* Execution Logs & Diff Viewer Component */}
-                  <ExecutionLogPanel task={selectedTask} />
-                </div>
-              ) : (
-                <div className="bg-[#0b101c] border border-neutral-800/80 rounded-xl p-12 text-center text-neutral-500 text-xs">
-                  No active directive selected. Choose a task from the Directives list or submit a new directive.
-                </div>
-              )}
+                    {/* Horizontal Task Lifecycle Progress Bar */}
+                    <div className="pt-2 border-t border-[#142339]">
+                      <TaskLifecycle task={selectedTask} />
+                    </div>
+
+                    {/* Pending Operator Approval Box if Blocked */}
+                    {selectedTask.status === 'awaiting_approval' && selectedTask.approvalRequest && (
+                      <div className="bg-amber-950/20 border border-amber-800/60 rounded-xl p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold">
+                            <ShieldAlert className="w-4 h-4" />
+                            <span>Action Blocked: Level 3 Operator Signoff Required</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-neutral-500">
+                            {selectedTask.approvalRequest.id}
+                          </span>
+                        </div>
+                        <p className="text-xs text-amber-200/90 font-mono">
+                          {selectedTask.approvalRequest.description}
+                        </p>
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button
+                            onClick={() => handleResolveApproval(selectedTask.id, false)}
+                            disabled={resolvingApprovalId === selectedTask.id}
+                            className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg bg-red-950/60 text-red-300 border border-red-800 hover:bg-red-900/60 transition"
+                          >
+                            <X className="w-3.5 h-3.5" /> Reject Directive
+                          </button>
+                          <button
+                            onClick={() => handleResolveApproval(selectedTask.id, true)}
+                            disabled={resolvingApprovalId === selectedTask.id}
+                            className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg bg-emerald-950/60 text-emerald-300 border border-emerald-800 hover:bg-emerald-900/60 transition"
+                          >
+                            <Check className="w-3.5 h-3.5" /> Authorize Execution
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Integrated Execution Log Panel */}
+                    <ExecutionLogPanel task={selectedTask} />
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-[#162942] bg-[#0A1220] p-10 text-center text-[#627D98] text-xs">
+                    No active directive selected. Choose a task from the Directives list or submit a new directive.
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1147,7 +1202,7 @@ export default function JarvisAgentWorkspace() {
             className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
             onClick={() => setInspectorOpen(false)}
           />
-          <aside className="fixed inset-y-0 right-0 w-80 max-w-[85vw] lg:w-96 lg:min-w-[24rem] md:static border-l border-neutral-800/80 bg-[#0a0e19] flex flex-col justify-between overflow-y-auto z-50 md:z-20 backdrop-blur-md shadow-2xl md:shadow-none">
+          <aside className="fixed inset-y-0 right-0 w-[300px] max-w-[85vw] md:static border-l border-[#152338] bg-[#070C16] flex flex-col justify-between overflow-y-auto z-50 md:z-20 shadow-2xl md:shadow-none shrink-0">
             <ProjectContextInspector
               activeProject={activeProject}
               selectedTask={selectedTask}
