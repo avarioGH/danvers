@@ -1,9 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { Menu, Bell, Search, X } from 'lucide-react'
 import Sidebar from './Sidebar'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const isJarvisPage = pathname?.startsWith('/jarvis')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [time, setTime] = useState<Date | null>(null)
 
@@ -18,6 +21,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const formatDate = (d: Date | null) =>
     d ? d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '...'
+
+  // If on /jarvis engineering workspace, render full-bleed without double shell/header
+  if (isJarvisPage) {
+    return <div className="w-full h-full min-h-screen bg-[#07090e]">{children}</div>
+  }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>

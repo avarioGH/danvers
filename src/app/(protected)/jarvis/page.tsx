@@ -9,8 +9,9 @@ import {
   Maximize2, Minimize2, PanelLeftClose, PanelLeft, PanelRightClose,
   PanelRight, FileText, Activity, AlertCircle, Copy, Laptop,
   HelpCircle, Eye, GitCommit, UserCheck, ShieldCheck, FolderPlus,
-  Trash2, ChevronDown, File
+  Trash2, ChevronDown, File, Menu, ArrowLeft
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface TaskScope {
   workspaceRoot: string;
@@ -118,8 +119,9 @@ interface FileTreeItem {
 
 export default function JarvisAgentWorkspace() {
   // Navigation & Panel States
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeNav, setActiveNav] = useState<'workspace' | 'files' | 'tasks' | 'approvals' | 'workers' | 'projects'>('workspace');
 
   // Backend Data States
@@ -456,13 +458,146 @@ export default function JarvisAgentWorkspace() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#07090e] text-neutral-200 font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+      {/* MOBILE TOP BAR (visible on < md) */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-12 bg-[#0a0d14]/95 border-b border-neutral-800/80 px-3 flex items-center justify-between z-30 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition"
+            aria-label="Open Navigation"
+          >
+            <Menu className="w-5 h-5 text-cyan-400" />
+          </button>
+          <span className="font-semibold text-xs tracking-wider text-neutral-100 flex items-center gap-1.5">
+            DANVERS JARVIS
+            <span className="text-[9px] px-1 py-0.2 rounded font-mono bg-cyan-950 text-cyan-400 border border-cyan-800/60">
+              v1.0
+            </span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <Link
+            href="/dashboard"
+            className="px-2 py-1 rounded text-[11px] font-mono text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 flex items-center gap-1"
+          >
+            <ArrowLeft className="w-3 h-3" /> OS
+          </Link>
+          <button
+            onClick={() => setInspectorOpen(!inspectorOpen)}
+            className={`p-1.5 rounded-lg transition ${inspectorOpen ? 'text-cyan-400 bg-cyan-950/40 border border-cyan-800/50' : 'text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800'}`}
+            title="Toggle Inspector"
+          >
+            <Activity className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* MOBILE DRAWER OVERLAY */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="relative w-72 max-w-[80vw] bg-[#0a0d14] border-r border-neutral-800 h-full flex flex-col justify-between z-10 p-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-cyan-950/40 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                    <Terminal className="w-4 h-4" />
+                  </div>
+                  <span className="font-bold text-xs text-white">DANVERS JARVIS</span>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1 rounded text-neutral-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Active Workspace Select */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-mono tracking-wider text-neutral-500">
+                  Active Sandbox Workspace
+                </label>
+                <select
+                  value={selectedProjectId}
+                  onChange={e => {
+                    setSelectedProjectId(e.target.value);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full px-2.5 py-1.5 bg-[#0e121b] border border-neutral-800 rounded text-xs text-neutral-200 focus:outline-none focus:border-cyan-500 font-mono"
+                >
+                  {projects.map(p => (
+                    <option key={p.id} value={p.rootPath}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Nav Items */}
+              <nav className="space-y-1 pt-2">
+                {[
+                  { id: 'workspace', label: 'Agent Workspace', icon: Layers },
+                  { id: 'files', label: 'File Explorer', icon: FileCode2 },
+                  { id: 'tasks', label: `Directives (${tasks.length})`, icon: ListTodo },
+                  {
+                    id: 'approvals',
+                    label: `Approvals (${pendingApprovals.length})`,
+                    icon: ShieldAlert,
+                    badge: pendingApprovals.length > 0
+                  },
+                  { id: 'workers', label: `Workers (${workers.length})`, icon: Server },
+                  { id: 'projects', label: 'Sandbox Repos', icon: FolderGit2 }
+                ].map(item => {
+                  const Icon = item.icon;
+                  const isActive = activeNav === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveNav(item.id as any);
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition ${
+                        isActive
+                          ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                          : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-cyan-400' : 'text-neutral-500'}`} />
+                      <span className="truncate">{item.label}</span>
+                      {item.badge && (
+                        <span className="ml-auto w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="pt-4 border-t border-neutral-800 space-y-2">
+              <Link
+                href="/dashboard"
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-mono bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" /> Return to Main OS
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* =========================================================================
-          COLUMN A: LEFT SIDEBAR (NAVIGATION, PROJECTS, WORKSPACE SCOPES)
+          COLUMN A: LEFT SIDEBAR (DESKTOP)
           ========================================================================= */}
       <aside
-        className={`${
+        className={`hidden md:flex ${
           sidebarOpen ? 'w-64 min-w-[16rem]' : 'w-16 min-w-[4rem]'
-        } flex flex-col justify-between border-r border-neutral-800/80 bg-[#0a0d14]/95 transition-all duration-300 ease-in-out z-20 backdrop-blur-md`}
+        } flex-col justify-between border-r border-neutral-800/80 bg-[#0a0d14]/95 transition-all duration-300 ease-in-out z-20 backdrop-blur-md`}
       >
         <div className="flex flex-col">
           <div className="flex items-center justify-between p-4 border-b border-neutral-800/60">
@@ -610,8 +745,8 @@ export default function JarvisAgentWorkspace() {
       {/* =========================================================================
           COLUMN B: MAIN WORKSPACE (DIRECTIVE EDITOR, FILE EXPLORER, LOGS)
           ========================================================================= */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#07090e]">
-        <header className="h-12 border-b border-neutral-800/80 bg-[#0a0d14]/70 px-4 flex items-center justify-between shrink-0 backdrop-blur-md">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#07090e] pt-12 md:pt-0">
+        <header className="hidden md:flex h-12 border-b border-neutral-800/80 bg-[#0a0d14]/70 px-4 items-center justify-between shrink-0 backdrop-blur-md">
           <div className="flex items-center gap-3 overflow-hidden">
             <span className="text-xs font-medium text-neutral-400 truncate">
               Workspace / <span className="text-neutral-200">{activeProject?.name || 'Workspace Root'}</span>
@@ -1258,7 +1393,12 @@ export default function JarvisAgentWorkspace() {
           COLUMN C: RIGHT-SIDE CONTEXTUAL INSPECTOR
           ========================================================================= */}
       {inspectorOpen && (
-        <aside className="w-80 min-w-[20rem] border-l border-neutral-800/80 bg-[#0a0d14]/95 flex flex-col justify-between overflow-y-auto z-20 backdrop-blur-md">
+        <>
+          <div
+            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            onClick={() => setInspectorOpen(false)}
+          />
+          <aside className="fixed inset-y-0 right-0 w-80 max-w-[85vw] md:static md:w-80 md:min-w-[20rem] border-l border-neutral-800/80 bg-[#0a0d14]/98 md:bg-[#0a0d14]/95 flex flex-col justify-between overflow-y-auto z-50 md:z-20 backdrop-blur-md shadow-2xl md:shadow-none">
           <div className="p-4 border-b border-neutral-800/60 flex items-center justify-between">
             <span className="text-xs font-semibold tracking-wider uppercase text-neutral-300 flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5 text-cyan-400" />
@@ -1378,6 +1518,7 @@ export default function JarvisAgentWorkspace() {
             </span>
           </div>
         </aside>
+        </>
       )}
 
       {/* MODAL: REGISTER NEW PROJECT WORKSPACE */}
