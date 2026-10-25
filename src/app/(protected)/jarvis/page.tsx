@@ -26,7 +26,7 @@ import { Task, Project, WorkerTelemetry, ProviderStatus, FileTreeItem } from '@/
 export default function JarvisAgentWorkspace() {
   // Navigation & Panel States
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeNav, setActiveNav] = useState<'workspace' | 'files' | 'tasks' | 'approvals' | 'workers' | 'projects' | 'ops'>('workspace');
   const [opsData, setOpsData] = useState<any>(null);
@@ -553,7 +553,7 @@ export default function JarvisAgentWorkspace() {
         {/* Central Dynamic Content Switcher */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
           {activeNav === 'workspace' && (
-            <div className="max-w-5xl mx-auto space-y-6">
+            <div className="w-full max-w-6xl mx-auto space-y-6">
               {/* Directive Submission Form */}
               <DirectiveComposer
                 directiveTitle={directiveTitle}
@@ -693,7 +693,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 2: FILE EXPLORER */}
           {activeNav === 'files' && (
-            <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-4 flex flex-col h-[650px]">
                 <div className="flex items-center justify-between pb-3 border-b border-neutral-800 mb-2">
                   <span className="text-xs font-mono font-semibold text-neutral-300 flex items-center gap-1.5">
@@ -750,7 +750,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 3: DIRECTIVES & QUEUE */}
           {activeNav === 'tasks' && (
-            <div className="max-w-5xl mx-auto space-y-4">
+            <div className="w-full max-w-6xl mx-auto space-y-4">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div className="flex items-center gap-2">
                   <ListTodo className="w-4 h-4 text-cyan-400" />
@@ -843,7 +843,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 4: OPERATOR APPROVALS */}
           {activeNav === 'approvals' && (
-            <div className="max-w-5xl mx-auto space-y-4">
+            <div className="w-full max-w-6xl mx-auto space-y-4">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-5">
                 <div className="flex items-center gap-2 text-amber-400 mb-1">
                   <ShieldAlert className="w-5 h-5" />
@@ -898,7 +898,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 5: WORKERS TELEMETRY */}
           {activeNav === 'workers' && (
-            <div className="max-w-5xl mx-auto space-y-4">
+            <div className="w-full max-w-6xl mx-auto space-y-4">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-4 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <Server className="w-4 h-4 text-cyan-400" />
@@ -961,7 +961,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 6: PROJECTS & SANDBOXES */}
           {activeNav === 'projects' && (
-            <div className="max-w-5xl mx-auto space-y-4">
+            <div className="w-full max-w-6xl mx-auto space-y-4">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-4 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <FolderGit2 className="w-4 h-4 text-cyan-400" />
@@ -1006,7 +1006,7 @@ export default function JarvisAgentWorkspace() {
 
           {/* TAB 7: JARVIS OPERATIONS & SECURITY AGENT */}
           {activeNav === 'ops' && (
-            <div className="max-w-5xl mx-auto space-y-6">
+            <div className="w-full max-w-6xl mx-auto space-y-6">
               <div className="bg-[#0b101c] border border-neutral-800 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                   <h2 className="text-sm font-semibold text-white flex items-center gap-2">
