@@ -172,7 +172,14 @@ export default function JarvisAgentWorkspace() {
 
   // Identify Windows Local Worker and compute status
   const windowsWorker = useMemo(() => {
-    return workers.find(w => w.name.toLowerCase().includes('windows')) || null;
+    // Return the latest active windows worker by registeredAt or lastHeartbeat
+    const matching = workers.filter(w => w.name.toLowerCase().includes('windows'));
+    if (matching.length === 0) return null;
+    return matching.reduce((latest, current) => {
+      const latestTime = new Date(latest.lastHeartbeat || latest.registeredAt).getTime();
+      const currentTime = new Date(current.lastHeartbeat || current.registeredAt).getTime();
+      return currentTime > latestTime ? current : latest;
+    });
   }, [workers]);
 
   const windowsWorkerState = useMemo(() => {
