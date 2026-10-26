@@ -13,7 +13,7 @@ export class TaskStore {
   private static reconcileStaleTasks() {
     try {
       const now = Date.now();
-      const STALE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes timeout threshold
+      const STALE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes timeout threshold
       let mutated = false;
 
       for (const task of this.tasks.values()) {
@@ -27,7 +27,7 @@ export class TaskStore {
             task.logs.push({
               timestamp: task.updatedAt,
               level: 'error',
-              message: 'Task automatically terminated: Execution exceeded 10 minutes timeout without worker activity.'
+              message: 'Task automatically terminated: Execution exceeded 5 minutes timeout without worker activity.'
             });
             mutated = true;
           }

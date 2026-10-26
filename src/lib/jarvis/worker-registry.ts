@@ -14,7 +14,8 @@ export class WorkerRegistry {
   private static lastAuditHash = '0000000000000000000000000000000000000000000000000000000000000000';
   private static initialized = false;
 
-  private static ensureInitialized() {
+  private static ensureInitialized(forceReload = false) {
+    if (this.initialized && !forceReload) return;
     try {
       if (!fs.existsSync(this.DB_DIR)) {
         fs.mkdirSync(this.DB_DIR, { recursive: true });
@@ -293,7 +294,7 @@ export class WorkerRegistry {
   }
 
   public static listWorkers(): RemoteWorker[] {
-    this.ensureInitialized();
+    this.ensureInitialized(true);
     return Array.from(this.workers.values());
   }
 

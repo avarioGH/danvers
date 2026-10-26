@@ -658,9 +658,19 @@ export default function JarvisAgentWorkspace() {
 
                   <div className="flex items-center gap-2">
                     <select
-                      className="bg-[#0B1526] border border-[#162942] rounded-lg px-2.5 py-1 text-xs text-[#CBD5E1] appearance-none cursor-pointer focus:outline-none"
+                      value={selectedTaskId || ''}
+                      onChange={e => setSelectedTaskId(e.target.value)}
+                      className="bg-[#0B1526] border border-[#162942] rounded-lg px-2.5 py-1 text-xs text-[#CBD5E1] cursor-pointer focus:outline-none max-w-[200px] truncate"
                     >
-                      <option>All tasks</option>
+                      {tasks.length === 0 ? (
+                        <option value="">No tasks queued</option>
+                      ) : (
+                        tasks.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.title}
+                          </option>
+                        ))
+                      )}
                     </select>
                   </div>
                 </div>
@@ -1202,7 +1212,7 @@ export default function JarvisAgentWorkspace() {
             className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
             onClick={() => setInspectorOpen(false)}
           />
-          <aside className="fixed inset-y-0 right-0 w-[300px] max-w-[85vw] md:static border-l border-[#152338] bg-[#070C16] flex flex-col justify-between overflow-y-auto z-50 md:z-20 shadow-2xl md:shadow-none shrink-0">
+          <aside className="fixed inset-y-0 right-0 w-[340px] max-w-[85vw] md:static border-l border-[#152338] bg-[#070C16] flex flex-col justify-between overflow-y-auto z-50 md:z-20 shadow-2xl md:shadow-none shrink-0">
             <ProjectContextInspector
               activeProject={activeProject}
               selectedTask={selectedTask}
