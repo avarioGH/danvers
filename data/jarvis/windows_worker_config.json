@@ -1,0 +1,6 @@
+{
+  "controlUrl": "https://avariodanvers.my.id",
+  "workerId": "wkr_windows_pc_primary",
+  "workerToken": "jwt_wkr_95535090128c3f6730beee5c9114cdc2a78f870b9f44f8ef568a53ea6dce31f8",
+  "heartbeatIntervalMs": 15000
+}
